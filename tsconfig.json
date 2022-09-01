@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "lib": ["es6", "dom"],
+        "module": "commonjs",
+        "target": "es6",
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "strictNullChecks": true,
+        "esModuleInterop": true,
+        "sourceMap": true,
+        "rootDir": "src",
+        "types": ["node"],
+        "outDir": "dist/js",
+        "noEmitOnError": true,
+        "typeRoots": [ "node_module/@types" ],
+        "jsx": "react-jsx"
+    }
+}

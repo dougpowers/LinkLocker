@@ -1,0 +1,44 @@
+{
+  "name": "link-locker",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "buildprod": "cross-env NODE_ENV='production' webpack --config webpack/webpack.config.js",
+    "builddev": "cross-env NODE_ENV='development' webpack --config webpack/webpack.config.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@mui/icons-material": "^5.8.4",
+    "@mui/material": "^5.8.7",
+    "@mui/lab": "^5.0.0-alpha.95",
+    "@types/argon2-browser": "^1.18.1",
+    "@types/crypto-js": "^4.1.1",
+    "@types/node": "^18.7.9",
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
+    "@types/uuid": "^8.3.4",
+    "@types/webextension-polyfill": "^0.9.0",
+    "argon2-browser": "^1.18.0",
+    "assert": "^2.0.0",
+    "base64-loader": "^1.0.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "cross-env": "^7.0.3",
+    "crypto-js": "^4.1.1",
+    "path-browserify": "^1.0.1",
+    "source-map": "^0.7.4",
+    "ts-loader": "^9.3.1",
+    "typescript": "^4.7.4",
+    "uuid": "^8.3.2",
+    "web-ext": "^7.2.0",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0",
+    "webextension-polyfill": "^0.9.0"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

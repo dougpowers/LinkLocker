@@ -1,0 +1,25 @@
+{
+   "name": "LinkLocker",
+   "description": "An encrypted link manager written with React in Typescript.",
+   "version": "0.1.0",
+   "manifest_version": 2,
+   "permissions": [
+      "activeTab",
+      "storage"
+   ],
+   "browser_action": {
+      "default_title": "LinkLocker",
+      "default_popup": "index.html",
+      "default_icon": {
+         "48": "LinkLockerLocked48.png",
+         "96": "LinkLockerLocked96.png"
+      }
+   },
+   "commands": {
+      "_execute_browser_action": {
+         "suggested_key": {
+            "default": "Ctrl+Alt+C"
+         }
+      }
+   }
+}
