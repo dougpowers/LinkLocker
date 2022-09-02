@@ -5,19 +5,42 @@ import Link from "@mui/material/Link"
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { createRef, ReactNode, useEffect } from "react";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import AddIcon from "@mui/icons-material/Add";
+import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import { LinkLockerLinkList, LinkLockerLink } from "./App";
+import { Fab, Menu, MenuItem } from "@mui/material";
 
 type Props = {
     linkList: LinkLockerLinkList | null,
     updateLinks: (linkList: LinkLockerLinkList) => void,
     logout: () => void;
+    deleteAcct: () => void;
 }
 
-const ViewLinks = ({linkList, updateLinks, logout}: Props) => {
+type LinkLockerLinkDir = {
+    hosts: Array<LinkLockerLinkHost>;
+} 
+
+type LinkLockerLinkHost = {
+    hostname: string;
+    favicon: string;
+    links: Array<LinkLockerPath>;
+}
+
+type LinkLockerPath = {
+    title: string;
+    href: string;
+    pathname: string;
+    timestamp: number;
+}
+
+const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
 
     const addLinkButton: any = createRef();
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const open = Boolean(anchorEl);
 
     const addLink = () => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
@@ -36,28 +59,20 @@ const ViewLinks = ({linkList, updateLinks, logout}: Props) => {
         }).catch((err) => {console.log(err)});
     }
 
+    const handleClick = (e: MouseEvent<HTMLElement>) => {
+        setAnchorEl(e.currentTarget);
+    };
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
     const removeLink = (link: LinkLockerLink) => {
         //Splice out link (compared using timestamp)
         linkList!.links.splice(linkList!.links!.findIndex((l) => {if (l.timestamp == link.timestamp) {return true;}}), 1);
         updateLinks(linkList!);
     }
 
-    type LinkLockerLinkDir = {
-        hosts: Array<LinkLockerLinkHost>;
-    } 
 
-    type LinkLockerLinkHost = {
-        hostname: string;
-        favicon: string;
-        links: Array<LinkLockerPath>;
-    }
-
-    type LinkLockerPath = {
-        title: string;
-        href: string;
-        pathname: string;
-        timestamp: number;
-    }
 
 
     const buildListSorted = (): ReactNode => {
@@ -113,6 +128,7 @@ const ViewLinks = ({linkList, updateLinks, logout}: Props) => {
                                         sx={{
                                             p: "1px",
                                             m: "1px",
+                                            mr: 1.5,
                                             maxWidth: "0px",
                                             maxHeight: "0px"
                                         }}>
@@ -130,7 +146,7 @@ const ViewLinks = ({linkList, updateLinks, logout}: Props) => {
             ;
         } else {
             return (
-                <Typography variant="body1">No links saved.</Typography>
+                <Typography variant="body2">No links saved.</Typography>
             )
         }
     }
@@ -140,12 +156,57 @@ const ViewLinks = ({linkList, updateLinks, logout}: Props) => {
     }, [])
 
     return (
-        <Stack spacing={0}>
+        <Stack spacing={0} minHeight="200px" minWidth="300px">
                 {buildListSorted()}
+            <Box flexGrow={1} />
             <Stack spacing={1} sx={{mt: 2}} direction="row" alignItems="center">
-                <Button variant="contained" size="small" onClick={logout}>Logout</Button>
+                {/* <Button variant="contained" size="small" onClick={logout}>Logout</Button> */}
+                <Fab 
+                    variant="extended"
+                    ref={addLinkButton}
+                    onClick={addLink}
+                    size="small"
+                    color="primary"
+                >
+                    <AddIcon />
+                    <Box sx={{pr: 1}}>
+                        Add Link
+                    </Box>
+                </Fab>
                 <Box flexGrow={1} />
-                <Button variant="contained" size="small" ref={addLinkButton} onClick={addLink}>Add Link</Button>
+                {/* <Button variant="contained" size="small" ref={addLinkButton} onClick={addLink}>Add Link</Button> */}
+                <IconButton
+                    id="long-button"
+                    onClick={handleClick}
+                    size="small"
+                >
+                    <MoreVertIcon />
+                </IconButton>
+                <Menu
+                    id="long-menu"
+                    anchorEl={anchorEl}
+                    open={open}
+                    onClose={handleClose}
+                    PaperProps={{
+                        style: {
+                            maxHeight: 48 * 4.5,
+                            width: "17ch",
+                        },
+                    }}
+                    anchorOrigin={{
+                        vertical: "top",
+                        horizontal: "right"
+                    }}
+                    transformOrigin={{
+                        vertical: "bottom",
+                        horizontal: "right"
+                    }}
+                >
+                    <MenuItem key="delete" onClick={deleteAcct} sx={{
+                        color: "error.main",
+                    }}>Delete Account...</MenuItem>
+                    <MenuItem key="logout" onClick={logout}>Logout</MenuItem>
+                </Menu>
             </Stack>
         </Stack>
     )

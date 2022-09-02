@@ -62,6 +62,12 @@ type ConfigReducerAction =
         }
     }
     | {
+        type: "removeAcct";
+        payload: {
+            guid: string;
+        }
+    }
+    | {
         type: "dismissIncognitoWarning";
     }
 
@@ -174,6 +180,10 @@ const App = () => {
             case "dismissIncognitoWarning":
                 browser.storage.local.set({ 'config': JSON.stringify({...config, incognitoWarningDismissed: true}) });
                 return {...config, incognitoWarningDismissed: true};
+            case "removeAcct":
+                updatedAcctList.splice(updatedAcctList.findIndex((a: LinkLockerAcct) => {if (a.guid == action.payload.guid) return}), 1);
+                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}) });
+                return {...config, accounts: updatedAcctList};
         }
     }
 
@@ -289,6 +299,11 @@ const App = () => {
         //Delete the active session
         window.localStorage.removeItem("sessionConfig");
         activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkList: null}})
+    }
+
+    const deleteAcct = () => {
+        configDispatch({type: "removeAcct", payload: {guid: activeAccount.guid}});
+        logout();
     }
 
     const showAcctCreate = () => {
@@ -441,7 +456,7 @@ const App = () => {
                         }
                         {
                             renderedComponent == ORenderedComponent.ViewLinks ?
-                            <ViewLinks linkList={activeAccount ? activeAccount!["linkList"] : null} updateLinks={updateLinks} logout={logout} />
+                            <ViewLinks linkList={activeAccount ? activeAccount!["linkList"] : null} updateLinks={updateLinks} logout={logout} deleteAcct={deleteAcct} />
                             :
                             null
                         }
