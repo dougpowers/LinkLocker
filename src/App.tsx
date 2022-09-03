@@ -373,6 +373,12 @@ const App = () => {
         }
         //No accounts in account list -> AcctCreate
         if (getAcctList(config).length<1 || addingNewAcct) {
+            browser.browserAction.setIcon({
+                path: {
+                    "48": "icons/LLLockDark48.png",
+                    "96": "icons/LLLockDark96.png"
+                }
+            });
             updateRenderedComponent(ORenderedComponent.AcctCreate);
         }
         //No activeAccount and accountList.length>0 -> Login
