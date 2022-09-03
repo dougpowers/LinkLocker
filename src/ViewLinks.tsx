@@ -9,8 +9,16 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
+import * as constants from './constants';
 import { LinkLockerLinkList, LinkLockerLink } from "./App";
-import { Fab, Menu, MenuItem } from "@mui/material";
+import Fab from "@mui/material/Fab";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 
 type Props = {
     linkList: LinkLockerLinkList | null,
@@ -39,8 +47,9 @@ type LinkLockerPath = {
 const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
 
     const addLinkButton: any = createRef();
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const open = Boolean(anchorEl);
+    const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
+    const hamburgerOpen = Boolean(hamburgerAnchorEl);
+    const [dialogOpen, setDialogOpen] = useState(false);
 
     const addLink = () => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
@@ -59,12 +68,16 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
         }).catch((err) => {console.log(err)});
     }
 
-    const handleClick = (e: MouseEvent<HTMLElement>) => {
-        setAnchorEl(e.currentTarget);
+    const handleHamburgerClick = (e: MouseEvent<HTMLElement>) => {
+        setHamburgerAnchorEl(e.currentTarget);
     };
-    const handleClose = () => {
-        setAnchorEl(null);
+    const handleHamburgerClose = () => {
+        setHamburgerAnchorEl(null);
     };
+
+    const handleDialogClose = () => {
+
+    }
 
     const removeLink = (link: LinkLockerLink) => {
         //Splice out link (compared using timestamp)
@@ -156,7 +169,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     }, [])
 
     return (
-        <Stack spacing={0} minHeight="200px" minWidth="300px">
+        <Stack spacing={0} minHeight="200px" minWidth={constants.MAIN_MIN_WIDTH}>
                 {buildListSorted()}
             <Box flexGrow={1} />
             <Stack spacing={1} sx={{mt: 2}} direction="row" alignItems="center">
@@ -177,16 +190,16 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 {/* <Button variant="contained" size="small" ref={addLinkButton} onClick={addLink}>Add Link</Button> */}
                 <IconButton
                     id="long-button"
-                    onClick={handleClick}
+                    onClick={handleHamburgerClick}
                     size="small"
                 >
                     <MoreVertIcon />
                 </IconButton>
                 <Menu
                     id="long-menu"
-                    anchorEl={anchorEl}
-                    open={open}
-                    onClose={handleClose}
+                    anchorEl={hamburgerAnchorEl}
+                    open={hamburgerOpen}
+                    onClose={handleHamburgerClose}
                     PaperProps={{
                         style: {
                             maxHeight: 48 * 4.5,
@@ -202,12 +215,25 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         horizontal: "right"
                     }}
                 >
-                    <MenuItem key="delete" onClick={deleteAcct} sx={{
+                    <MenuItem key="delete" onClick={() => {setDialogOpen(true)}} sx={{
                         color: "error.main",
                     }}>Delete Account...</MenuItem>
                     <MenuItem key="logout" onClick={logout}>Logout</MenuItem>
                 </Menu>
             </Stack>
+            <Dialog 
+                open={dialogOpen}
+                onClose={handleDialogClose}
+                >
+                <DialogTitle>{"Delete Account?"}</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>Are you really sure you want to delete this account?</DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={(e) => {setDialogOpen(false)}} autoFocus>Go Back</Button>
+                    <Button onClick={(e) => {setDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
+                </DialogActions>
+                </Dialog>
         </Stack>
     )
 }

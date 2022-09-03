@@ -1,11 +1,13 @@
 {
   "name": "link-locker",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "description": "",
   "main": "index.js",
   "scripts": {
     "buildprod": "cross-env NODE_ENV='production' webpack --config webpack/webpack.config.js",
-    "builddev": "cross-env NODE_ENV='development' webpack --config webpack/webpack.config.js"
+    "builddev": "cross-env NODE_ENV='development' webpack --config webpack/webpack.config.js",
+    "runprod": "cross-env WEB_EXT_SOURCE_DIR=\"dist\" WEB_EXT_ARTIFACTS_DIR=\"dist/web-ext-artifacts\" WEB_EXT_FIREFOX=\"C:\\Program Files\\Firefox Developer Edition\\firefox.exe\" npx web-ext run -u=\"about:debugging#/runtime/this-firefox\"",
+    "rundev": "cross-env WEB_EXT_SOURCE_DIR=\"build\" WEB_EXT_ARTIFACTS_DIR=\"build/web-ext-artifacts\" WEB_EXT_FIREFOX=\"C:\\Program Files\\Firefox Developer Edition\\firefox.exe\" npx web-ext run -u=\"about:debugging#/runtime/this-firefox\""
   },
   "keywords": [],
   "author": "",

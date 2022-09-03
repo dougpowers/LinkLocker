@@ -1,14 +1,3 @@
-// TODO:    
-//          DONE fix typing on state reducers
-//          DONE add non-incognito guard
-//          DONE resize "X" buttons
-//          DONE fix versioning
-//          DONE organize links under url.hostname
-//          DONE add comments to explain state flow
-//          DONE implement prod and dev build scripts for npm and webpack
-//          DONE create addon icon
-//          commit to github
-
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -388,10 +377,22 @@ const App = () => {
         }
         //No activeAccount and accountList.length>0 -> Login
         if (getAcctList(config).length>0 && !activeAccount.guid && !addingNewAcct) {
+            browser.browserAction.setIcon({
+                path: {
+                    "48": "icons/LLLockDark48.png",
+                    "96": "icons/LLLockDark96.png"
+                }
+            });
             updateRenderedComponent(ORenderedComponent.Login);
         }
         //activeAccount specified -> ViewLinks
         if (activeAccount.guid && !addingNewAcct) {
+            browser.browserAction.setIcon({
+                path: {
+                    "48": "icons/LLUnlockDark48.png",
+                    "96": "icons/LLUnlockDark96.png"
+                }
+            });
             updateRenderedComponent(ORenderedComponent.ViewLinks);
         }
     })
@@ -430,7 +431,7 @@ const App = () => {
                         </Typography>
                     </Box>
                 </Modal>
-                <Box margin="1rem" maxWidth="300px">
+                <Box margin="1rem" minWidth={constants.MAIN_MIN_WIDTH}>
                     <Stack spacing={2} alignItems="center" key={renderedComponent}> 
                         <Typography variant="h5">
                             LinkLocker
