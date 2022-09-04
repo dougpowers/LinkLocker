@@ -19,6 +19,7 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import { Hidden } from "@mui/material";
 
 type Props = {
     linkList: LinkLockerLinkList | null,
@@ -127,6 +128,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                             pt: 0.25,
                                             ml: 2,
                                             lineHeight: 1,
+                                            whiteSpace: "nowrap",
                                             overflow: "hidden",
                                         }}>
                                             {link.title}
@@ -140,8 +142,8 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                         })}
                                         sx={{
                                             p: "1px",
-                                            m: "1px",
-                                            mr: 1.5,
+                                            ml: 1.5,
+                                            mr: 1,
                                             maxWidth: "0px",
                                             maxHeight: "0px"
                                         }}>
@@ -169,11 +171,19 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     }, [])
 
     return (
-        <Stack spacing={0} minHeight="200px" minWidth={constants.MAIN_MIN_WIDTH}>
+        <Stack spacing={0} minHeight={constants.INNER_MIN_HEIGHT} maxWidth={constants.MAIN_MIN_WIDTH} minWidth={constants.MAIN_MIN_WIDTH}
+            sx={{
+            }}>
+            <Box sx={{
+                overflowY: "scroll",
+                overflowX: "hidden",
+                scrollbarWidth: "thin",
+                maxHeight: constants.SCROLLER_MAX_HEIGHT,
+            }}>
                 {buildListSorted()}
+            </Box>
             <Box flexGrow={1} />
             <Stack spacing={1} sx={{mt: 2}} direction="row" alignItems="center">
-                {/* <Button variant="contained" size="small" onClick={logout}>Logout</Button> */}
                 <Fab 
                     variant="extended"
                     ref={addLinkButton}
@@ -187,7 +197,6 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     </Box>
                 </Fab>
                 <Box flexGrow={1} />
-                {/* <Button variant="contained" size="small" ref={addLinkButton} onClick={addLink}>Add Link</Button> */}
                 <IconButton
                     id="long-button"
                     onClick={handleHamburgerClick}
@@ -215,10 +224,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         horizontal: "right"
                     }}
                 >
-                    <MenuItem key="delete" onClick={() => {setDialogOpen(true)}} sx={{
+                    <MenuItem key="delete" divider onClick={() => {setDialogOpen(true)}} sx={{
                         color: "error.main",
                     }}>Delete Account...</MenuItem>
-                    <MenuItem key="logout" onClick={logout}>Logout</MenuItem>
+                    <MenuItem key="logout" onClick={logout} selected>Logout</MenuItem>
                 </Menu>
             </Stack>
             <Dialog 
@@ -226,8 +235,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 onClose={handleDialogClose}
                 >
                 <DialogTitle>{"Delete Account?"}</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>Are you really sure you want to delete this account?</DialogContentText>
+                <DialogContent sx={{
+                        overflow: "hidden",
+                    }}>
+                    <DialogContentText>Are you sure you want to delete this account?</DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={(e) => {setDialogOpen(false)}} autoFocus>Go Back</Button>

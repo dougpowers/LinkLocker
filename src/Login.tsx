@@ -54,7 +54,7 @@ const Login = ({failedLogin, availableLogins, tryLogin, showAcctCreate}: Props) 
     }, [])
 
     return (
-            <Box margin="10px">
+            <Box>
                 <Stack spacing={1} alignItems="left"> 
                     <FormControl fullWidth>
                         <InputLabel id="username-select-label">Username</InputLabel>

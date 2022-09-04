@@ -107,7 +107,7 @@ type RenderedComponent = typeof ORenderedComponent[keyof typeof ORenderedCompone
 //Set default theme to dark
 export const darkTheme = createTheme({
     palette: {
-        mode: 'dark',
+        mode: constants.PALETTE_MODE,
     },
 });
 
@@ -437,7 +437,7 @@ const App = () => {
                         </Typography>
                     </Box>
                 </Modal>
-                <Box margin="1rem" minWidth={constants.MAIN_MIN_WIDTH}>
+                <Box padding="1rem" margin="auto" overflow-y="hidden" maxWidth={constants.MAIN_MIN_WIDTH} minWidth={constants.MAIN_MIN_WIDTH}>
                     <Stack spacing={2} alignItems="center" key={renderedComponent}> 
                         <Typography variant="h5">
                             LinkLocker

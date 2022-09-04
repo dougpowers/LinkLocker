@@ -1,7 +1,26 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <style type="text/css">
+            :root {
+                max-height: 600px;
+            }
+            body {
+                width: 330px;
+                max-width: 100%;
+                position: relative;
+                overflow-y: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            .scroller {
+                display: flex;
+                overflow: hidden;
+            }
+        </style>
+    </head>
     <body>
-        <div id="reactapp"></div>
+        <div id="reactapp" class="scroller"></div>
         <script src="main.js"></script>
     </body>
 </html>

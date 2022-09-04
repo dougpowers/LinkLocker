@@ -57,7 +57,7 @@ const AcctCreate = forwardRef((
     }
 
     return (
-            <Box margin="10px">
+            <Box>
                 <Stack spacing={2} alignItems="left"> 
                     <Stack spacing={0} alignItems="left">
                         <Typography variant="caption">New User GUID:</Typography>
