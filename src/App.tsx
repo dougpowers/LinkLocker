@@ -413,12 +413,19 @@ const App = () => {
                         configDispatch({type: "dismissIncognitoWarning"});
                         setIncognitoModalOpen(false);     
                     }}
-                    disableAutoFocus={true}
+                    disableAutoFocus={false}
                     sx={{
                         margin: 'auto', 
                         display: 'flex', 
                         justifyContent: 'center', 
                         alignItems: 'center',
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key == " " || e.key === "Enter") {
+                            e.preventDefault();
+                            configDispatch({type: "dismissIncognitoWarning"});
+                            setIncognitoModalOpen(false);
+                        }
                     }}
                 >
                     <Box maxWidth="80%" maxHeight="fit-content" sx={{
