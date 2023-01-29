@@ -15,6 +15,8 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import * as constants from "./constants";
 import Modal from "@mui/material/Modal";
 
+declare var __IN_DEBUG__: string;
+
 interface LinkLockerAcct {
     username?: string;   
     guid: string;
@@ -78,14 +80,16 @@ interface LinkLockerConfig {
 }
 
 export interface LinkLockerLink {
+    guid: string;
     href: string;
-    favicon: string;
+    favicon?: string;
     title: string;
     timestamp: number;
+    keywords: string[];
 }
 
 export interface LinkLockerLinkList {
-    links: [LinkLockerLink]
+    links: LinkLockerLink[]
 }
 
 export type LinkLockerActiveAccount = {
@@ -353,6 +357,7 @@ const App = () => {
     }
 
     useEffect(() => {
+        console.debug(__IN_DEBUG__);
         getConfigsFromStorage();
     }, []);
 
@@ -444,8 +449,16 @@ const App = () => {
                         </Typography>
                     </Box>
                 </Modal>
-                <Box padding="1rem" margin="auto" overflow-y="hidden" maxWidth={constants.MAIN_MIN_WIDTH} minWidth={constants.MAIN_MIN_WIDTH}>
-                    <Stack spacing={2} alignItems="center" key={renderedComponent}> 
+                <Box 
+                    padding="0.8rem" 
+                    margin="auto" 
+                    // overflow-y="hidden" 
+                    maxWidth={constants.MAIN_MAX_WIDTH} 
+                    minWidth={constants.MAIN_MIN_WIDTH}
+                    maxHeight="fit-content"
+                    boxSizing="border-box"
+                >
+                    <Stack spacing={1} alignItems="center" key={renderedComponent}> 
                         <Typography variant="h5">
                             LinkLocker
                         </Typography>
@@ -470,7 +483,12 @@ const App = () => {
                         }
                         {
                             renderedComponent == ORenderedComponent.ViewLinks ?
-                            <ViewLinks linkList={activeAccount ? activeAccount!["linkList"] : null} updateLinks={updateLinks} logout={logout} deleteAcct={deleteAcct} />
+                            <ViewLinks 
+                                linkList={activeAccount ? activeAccount!["linkList"] : null} 
+                                updateLinks={updateLinks} 
+                                logout={logout} 
+                                deleteAcct={deleteAcct} 
+                            />
                             :
                             null
                         }

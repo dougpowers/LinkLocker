@@ -2,29 +2,6 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
 
-function getClientEnvironment() {
-    const raw = Object.keys(process.env).reduce(
-        (env, key) => {
-            env[key] = process.env[key];
-            return env;
-        },
-        {
-            NODE_ENV: process.env.NODE_ENV || 'development'
-        }
-    );
-    
-    const stringified = {
-        'process.env': Object.keys(raw).reduce((env, key) => {
-            env[key] = JSON.stringify(raw[key]);
-            return env;
-        }, {}),
-    };
-
-    return {raw, stringified};
-}
-
-const env = getClientEnvironment();
-
 switch (process.env.NODE_ENV) {
     case 'production':
         module.exports = {
@@ -64,6 +41,9 @@ switch (process.env.NODE_ENV) {
             plugins: [
                 new CopyPlugin({
                     patterns: [{from: ".", to: ".", context: "static"}]
+                }),
+                new webpack.DefinePlugin({
+                    __IN_DEBUG__: JSON.stringify(false)
                 }),
             ]
         }
@@ -110,7 +90,12 @@ switch (process.env.NODE_ENV) {
                 new CopyPlugin({
                     patterns: [{from: ".", to: ".", context: "static"}]
                 }),
-                new webpack.DefinePlugin(env.stringified)
+                new webpack.DefinePlugin({
+                    __IN_DEBUG__: JSON.stringify(true),
+                    __DEBUG_LIST__: JSON.stringify(
+                        [{"guid":"41648719-197b-4523-8bc9-f7aa4f8b7967","href":"https://www.wikipedia.org/","title":"Wikipedia","timestamp":1674962750216,"keywords":""},{"guid":"c3bdfec6-7844-440d-8977-16d83721e548","href":"https://www.wikipedia.org/","title":"Wikipedia","timestamp":1674962751015,"keywords":""},{"guid":"ba0e31e6-f196-4484-b19b-7a5b1b505294","href":"https://www.wikipedia.org/","title":"Wikipedia","timestamp":1674962751287,"keywords":""},{"guid":"b66b4a1a-9f94-4a7f-ac81-8f4ccd158b2e","href":"https://www.wikipedia.org/","title":"Wikipedia","timestamp":1674962751599,"keywords":""}]
+                    ),
+                }),
             ]
         }
         break;
