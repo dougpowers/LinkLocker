@@ -85,7 +85,7 @@ export interface LinkLockerLink {
     favicon?: string;
     title: string;
     timestamp: number;
-    keywords: string[];
+    keywords: Array<string>;
 }
 
 export interface LinkLockerLinkList {

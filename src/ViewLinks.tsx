@@ -10,6 +10,7 @@ import LinkIcon from "@mui/icons-material/Link";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
+import InfoIcon from "@mui/icons-material/Info";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
@@ -27,7 +28,8 @@ import Modal from "@mui/material/Modal";
 import TextField from "@mui/material/TextField";
 import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
-import { ListItemSecondaryAction } from "@mui/material";
+import Popover from "@mui/material/Popover";
+import { bottomNavigationActionClasses } from "@mui/material";
 
 declare var __IN_DEBUG__: string;
 declare var __DEBUG_LIST__: LinkLockerLink[];
@@ -63,6 +65,8 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     const searchField: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
     const hamburgerOpen = Boolean(hamburgerAnchorEl);
+    const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
+    const popoverOpen = Boolean(popoverAnchorEl);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [addLinkDialogOpen, setAddLinkDialogOpen] = useState(false);
     const [editLinkDialogOpen, setEditLinkDialogOpen] = useState(false);
@@ -74,15 +78,27 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     const [linkKeywords, setLinkKeywords] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
+    const setLink = (link: LinkLockerLink) => {
+        if (link.favicon) setLinkFaviconUrl(link.favicon);
+        setLinkGuid(link.guid);
+        setLinkUrl(new URL(link.href));
+        setLinkName(link.title);
+        if (linkKeywords.length > 0) {
+            setLinkKeywords(link.keywords.join(" "));
+        } else {
+            setLinkKeywords("");
+        }
+    }    
+
     const openAddLinkDialog = () => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
-            let link = {
-                href: tabs.at(0)!.url!,
-                title: tabs.at(0)!.title!,
-                favicon: tabs.at(0)!.favIconUrl!, 
-                timestamp: Date.now(), 
-                keywords: []
-            };
+            // let link = {
+            //     href: tabs.at(0)!.url!,
+            //     title: tabs.at(0)!.title!,
+            //     favicon: tabs.at(0)!.favIconUrl!, 
+            //     timestamp: Date.now(), 
+            //     keywords: []
+            // };
             setLinkFaviconUrl(tabs.at(0)!.favIconUrl!);
             setLinkUrl(new URL(tabs.at(0)!.url!));
             setLinkName(tabs.at(0)!.title!);
@@ -96,11 +112,11 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
         if (link.favicon) setLinkFaviconUrl(link.favicon);
         setLinkUrl(new URL(link.href));
         setLinkName(link.title);
-        console.debug(JSON.stringify(link.keywords));
         if (link.keywords.length > 0) {
-            setLinkKeywords(Array.from(link.keywords).reduce((pv, cv, i) => {
-                return `${pv} ${cv}`;
-            }));
+            setLinkKeywords(link.keywords.join(" "))
+            // setLinkKeywords(Array.from(link.keywords).reduce((pv, cv, i) => {
+            //     return `${pv} ${cv}`;
+            // }));
         } else {
             setLinkKeywords("");
         }
@@ -263,6 +279,38 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                         </Link>
                                         <Box flexGrow={1} />
                                         <IconButton size="small" 
+                                            onMouseEnter={(e) => {
+                                                console.debug(e.currentTarget.parentElement);
+                                                setLink(link);
+                                                setPopoverAnchorEl(e.currentTarget.parentElement);
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                setPopoverAnchorEl(null);
+                                            }}
+                                            onFocus={(e) => {
+                                                e.currentTarget.style.opacity = "100%"
+                                            }}
+                                            onBlur={(e) => {
+                                                e.currentTarget.style.opacity = "0%"
+                                            }}
+                                            sx={{
+                                                p: "1px",
+                                                ml: 1.5,
+                                                mr: 1,
+                                                maxWidth: "0px",
+                                                maxHeight: "0px",
+                                                opacity: "0%",
+                                            }}
+                                        >
+                                            <InfoIcon 
+                                                sx={{
+                                                    fontSize: 16, 
+                                                    color: "common.white",
+                                                    opacity: "inherit",
+                                                }} 
+                                            />
+                                        </IconButton>
+                                        <IconButton size="small" 
                                             onClick={(e) => {
                                                 openEditLinkDialog(link);
                                                 e.currentTarget.style.opacity = "0%"
@@ -275,7 +323,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                             }}
                                             sx={{
                                                 p: "1px",
-                                                ml: 1.5,
+                                                ml: 1,
                                                 mr: 1,
                                                 maxWidth: "0px",
                                                 maxHeight: "0px",
@@ -475,7 +523,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         }
                     }}
                 >
-                    <Typography variant="caption">
+                    <Typography paragraph variant="caption">
                         {
                             JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "keywords"], undefined)
                         }
@@ -665,6 +713,28 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     </Stack>
                 </Box>
             </Modal>
+            <Popover
+                id="entry-popover"
+                anchorEl={popoverAnchorEl}
+                open={popoverOpen}
+                anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "left"
+                }}
+                transformOrigin={{
+                    vertical: "top",
+                    horizontal: "left"
+                }}
+                sx={{pointerEvents: "none"}}
+                onClose={() => {setPopoverAnchorEl(null);}}
+                disableRestoreFocus
+            >
+                <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
+                    guid: {linkGuid} <br />
+                    href: {linkUrl?.toString()} <br />
+                    keywords: {linkKeywords}
+                </Typography>
+            </Popover>
             <Stack 
                 spacing={0} 
                 minHeight={constants.INNER_MIN_HEIGHT} 
@@ -748,6 +818,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                 <MenuItem
                                     key="dump_json"
                                     onClick={() => {
+                                        handleHamburgerClose();
                                         setJsonDumpOpen(true);
                                     }}
                                     sx={{color: "secondary.main"}}
@@ -761,7 +832,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                         __DEBUG_LIST__.forEach((v, i) => {
                                             addLink(new URL(v.href), v.title, v.favicon ? v.favicon : "", v.keywords);
                                         });
-                                        setJsonDumpOpen(false);
+                                        handleHamburgerClose();
                                     }}
                                     sx={{color: "secondary.main"}}
                                 >
@@ -798,7 +869,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         <Button onClick={(e) => {setDialogOpen(false)}} autoFocus>Go Back</Button>
                         <Button onClick={(e) => {setDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
                     </DialogActions>
-                    </Dialog>
+                </Dialog>
             </Stack>
         </Box>
     )
