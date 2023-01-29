@@ -134,8 +134,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     }
 
     const buildListSorted = (): ReactNode => {
-
-        const renderGroupByHost = (linkList: LinkLockerLinkList) => {
+        const renderGroupByHost = (linkList: LinkLockerLinkList, sort?: boolean) => {
             let dir: LinkLockerLinkDir = { hosts: new Array() }
             linkList.links.forEach((l) => {
                 let url = new URL(l.href);
@@ -153,6 +152,39 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     }
                 }
             })
+            if (sort) {
+                dir.hosts.sort((a,b) => {
+                    let domainsA: string[] = a.hostname.split(".");
+                    let domainsB: string[] = b.hostname.split(".");
+                    domainsA.pop();
+                    domainsB.pop();
+                    let sortA: string;
+                    let sortB: string;
+                    while (true) {
+                        if (domainsA.length == 1) {
+                            sortA = domainsA.at(0) as string;
+                            break;
+                        }
+                        let domain = domainsA.pop() as string;
+                        if (domain.length > 2) {
+                            sortA = domain;
+                            break;
+                        }
+                    }
+                    while (true) {
+                        if (domainsB.length == 1) {
+                            sortB = domainsB.at(0) as string;
+                            break;
+                        }
+                        let domain = domainsB.pop() as string;
+                        if (domain.length > 2) {
+                            sortB = domain;
+                            break;
+                        }
+                    }
+                    return sortA.localeCompare(sortB);
+                });
+            }
             return (dir.hosts.map((host, index) => {
                     return (
                         <Stack direction="column" sx={{
@@ -236,16 +268,76 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
             ));
         }
 
-        const renderFlat = (list: LinkLockerLink[]) => {
-
+        const renderFlat = (linkList: LinkLockerLinkList) => {
+            let links = Array.from(linkList.links);
+            return (links.map((link, i) => {
+                return (
+                <Stack 
+                    direction="row" 
+                    justifyItems="left" 
+                    maxWidth={constants.LINK_ENTRY_MAX_WIDTH}
+                    sx={{mt: "2px"}} 
+                    alignItems="center" 
+                    key={link.title+link.timestamp.toString()}
+                    onMouseOver={function (e) {
+                        (e.currentTarget.querySelector("button") as HTMLButtonElement).style.opacity = "100%";
+                    }}
+                    onMouseOut={function (e) {
+                        (e.currentTarget.querySelector("button") as HTMLButtonElement).style.opacity = "0%";
+                    }}
+                >
+                    {
+                        link.favicon ?
+                        <img src={link.favicon} width="16px" height="16px" key={link.favicon}></img>
+                        :
+                        <LinkIcon sx={{
+                            fontSize: 16,
+                            color: "common.white"
+                        }}/>
+                    }
+                    <Link variant="caption" href={link.href} key={link.href+link.timestamp.toString()} sx={{
+                        pr: 1,
+                        pt: 0.25,
+                        ml: 2,
+                        lineHeight: 1,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                    }}>
+                        {link.title}
+                    </Link>
+                    <Box flexGrow={1} />
+                    <IconButton size="small" 
+                        onClick={() => removeLink(link.guid)}
+                        onFocus={(e) => {
+                            e.currentTarget.style.opacity = "100%"
+                        }}
+                        onBlur={(e) => {
+                            e.currentTarget.style.opacity = "0%"
+                        }}
+                        sx={{
+                            p: "1px",
+                            ml: 1.5,
+                            mr: 1,
+                            maxWidth: "0px",
+                            maxHeight: "0px",
+                            opacity: "0%",
+                        }}
+                    >
+                        <DeleteIcon 
+                            sx={{
+                                fontSize: 16, 
+                                color: "error.dark",
+                                opacity: "inherit",
+                            }} 
+                        />
+                    </IconButton>
+                </Stack>
+                );
+            }));
         }
 
         if(linkList != null && linkList.links.length > 0 && searchTerm == "") {
-            return renderGroupByHost(linkList);
-        } else if ((linkList == null || linkList.links.length == 0)) {
-            return (
-                <Typography variant="body2">No links saved.</Typography>
-            )
+            return renderGroupByHost(linkList, true);
         } else if (searchTerm != "" && linkList) {
             const fuse = new Fuse(linkList.links, {
                 keys: [
@@ -259,14 +351,18 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
 
             const result = fuse.search(searchTerm);
             if (result.length > 0) {
-                return renderGroupByHost({
-                    links: result.map((v, i) => {return v.item;}),
+                return renderFlat({
+                    links: result.map((v, i) => {return v.item;}) as LinkLockerLink[],
                 });
             } else {
                 return (
                     <Typography variant="body2">No results found.</Typography>
                 )
             }
+        } else if ((linkList == null || linkList.links.length == 0)) {
+            return (
+                <Typography variant="body2">No links saved.</Typography>
+            )
         }
     }
 
@@ -296,7 +392,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 >
                     <Typography variant="caption">
                         {
-                            JSON.stringify(linkList?.links, ["guid", "href", "title", "timestamp", "keywords"], undefined)
+                            JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "keywords"], undefined)
                         }
                     </Typography>
                 </Modal>
@@ -308,7 +404,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 disableAutoFocus={true}
                 sx={{
                     margin: "auto",
-                    maxHeight: "fit-content"
+                    maxHeight: "fit-content",
+                    // border: 1,
+                    // borderColor: "primary.main",
+                    // borderRadius: 1,
                 }}
             >
                 <Box
@@ -319,7 +418,8 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     maxHeight="fit-content"
                     bgcolor="background.paper"
                     padding="10px"
-                    borderRadius="3px"
+                    border={1}
+                    borderRadius={1}
                     borderColor="primary.main"
                     display="flex"
                     flexDirection="column"
