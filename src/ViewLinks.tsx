@@ -5,6 +5,7 @@ import Link from "@mui/material/Link"
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import LinkIcon from "@mui/icons-material/Link";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
@@ -55,6 +56,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     const addLinkKeywordsField: any = createRef();
     const addLinkDialogAddButton: any = createRef();
     const addLinkDialogCancelButton: any = createRef();
+    const editLinkNameField: any = createRef();
+    const editLinkKeywordsField: any = createRef();
+    const editLinkDialogAddButton: any = createRef();
+    const editLinkDialogCancelButton: any = createRef();
     const searchField: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
     const hamburgerOpen = Boolean(hamburgerAnchorEl);
@@ -62,6 +67,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     const [addLinkDialogOpen, setAddLinkDialogOpen] = useState(false);
     const [editLinkDialogOpen, setEditLinkDialogOpen] = useState(false);
     const [jsonDumpOpen, setJsonDumpOpen] = useState(false);
+    const [linkGuid, setLinkGuid] = useState("");
     const [linkFaviconUrl, setLinkFaviconUrl] = useState("");
     const [linkUrl, setLinkUrl] = useState<null | URL>(null);
     const [linkName, setLinkName] = useState("");
@@ -85,16 +91,26 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
         }).catch((err) => {console.debug(err)});
     }    
 
+    const openEditLinkDialog = (link: LinkLockerLink) => {
+        setLinkGuid(link.guid);
+        if (link.favicon) setLinkFaviconUrl(link.favicon);
+        setLinkUrl(new URL(link.href));
+        setLinkName(link.title);
+        console.debug(JSON.stringify(link.keywords));
+        if (link.keywords.length > 0) {
+            setLinkKeywords(Array.from(link.keywords).reduce((pv, cv, i) => {
+                return `${pv} ${cv}`;
+            }));
+        } else {
+            setLinkKeywords("");
+        }
+        setEditLinkDialogOpen(true);
+    }
+
     const addLink = (href: URL, name: string, favicon: string, keywords: string[]) => {
+        console.debug(`Adding link with keywords ${JSON.stringify(keywords)}`)
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
             if (tabs.at(0) != undefined && tabs.at(0)!.url) {
-                // let link = {
-                //     href: tabs.at(0)!.url!, 
-                //     title: tabs.at(0)!.title!, 
-                //     favicon: tabs.at(0)!.favIconUrl!, 
-                //     timestamp: Date.now(), 
-                //     keywords: []
-                // };
                 let link = {
                     guid: uuidv4(),
                     href: href.toString(),
@@ -116,6 +132,18 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
         }).catch((err) => {console.debug(err)});
     }
 
+    const editLink = (guid: string, href: URL, name: string, favicon: string, keywords: [string]) => {
+        linkList?.links.forEach((link, i) => {
+            if (link.guid == guid) {
+                link.href = href.toString();
+                link.title = name;
+                link.keywords = keywords;
+                return;
+            }
+        });
+        updateLinks(linkList!);
+    }
+
     const handleHamburgerClick = (e: MouseEvent<HTMLElement>) => {
         setHamburgerAnchorEl(e.currentTarget);
     };
@@ -134,6 +162,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     }
 
     const buildListSorted = (): ReactNode => {
+
         const renderGroupByHost = (linkList: LinkLockerLinkList, sort?: boolean) => {
             let dir: LinkLockerLinkDir = { hosts: new Array() }
             linkList.links.forEach((l) => {
@@ -216,10 +245,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                         alignItems="center" 
                                         key={link.title+link.timestamp.toString()}
                                         onMouseOver={function (e) {
-                                            (e.currentTarget.querySelector("button") as HTMLButtonElement).style.opacity = "100%";
+                                            (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
                                         }}
                                         onMouseOut={function (e) {
-                                            (e.currentTarget.querySelector("button") as HTMLButtonElement).style.opacity = "0%";
+                                            (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "0%";})
                                         }}
                                     >
                                         <Link variant="caption" href={link.href} key={link.href+link.timestamp.toString()} sx={{
@@ -234,7 +263,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                         </Link>
                                         <Box flexGrow={1} />
                                         <IconButton size="small" 
-                                            onClick={() => removeLink(link.guid)}
+                                            onClick={(e) => {
+                                                openEditLinkDialog(link);
+                                                e.currentTarget.style.opacity = "0%"
+                                            }}
                                             onFocus={(e) => {
                                                 e.currentTarget.style.opacity = "100%"
                                             }}
@@ -244,6 +276,31 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                             sx={{
                                                 p: "1px",
                                                 ml: 1.5,
+                                                mr: 1,
+                                                maxWidth: "0px",
+                                                maxHeight: "0px",
+                                                opacity: "0%",
+                                            }}
+                                        >
+                                            <EditIcon 
+                                                sx={{
+                                                    fontSize: 16, 
+                                                    color: "success.dark",
+                                                    opacity: "inherit",
+                                                }} 
+                                            />
+                                        </IconButton>
+                                        <IconButton size="small" 
+                                            onClick={() => removeLink(link.guid)}
+                                            onFocus={(e) => {
+                                                e.currentTarget.style.opacity = "100%"
+                                            }}
+                                            onBlur={(e) => {
+                                                e.currentTarget.style.opacity = "0%"
+                                            }}
+                                            sx={{
+                                                p: "1px",
+                                                ml: 1,
                                                 mr: 1,
                                                 maxWidth: "0px",
                                                 maxHeight: "0px",
@@ -280,10 +337,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     alignItems="center" 
                     key={link.title+link.timestamp.toString()}
                     onMouseOver={function (e) {
-                        (e.currentTarget.querySelector("button") as HTMLButtonElement).style.opacity = "100%";
+                        (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
                     }}
                     onMouseOut={function (e) {
-                        (e.currentTarget.querySelector("button") as HTMLButtonElement).style.opacity = "0%";
+                        (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "0%";})
                     }}
                 >
                     {
@@ -306,31 +363,59 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         {link.title}
                     </Link>
                     <Box flexGrow={1} />
-                    <IconButton size="small" 
-                        onClick={() => removeLink(link.guid)}
-                        onFocus={(e) => {
-                            e.currentTarget.style.opacity = "100%"
-                        }}
-                        onBlur={(e) => {
-                            e.currentTarget.style.opacity = "0%"
-                        }}
-                        sx={{
-                            p: "1px",
-                            ml: 1.5,
-                            mr: 1,
-                            maxWidth: "0px",
-                            maxHeight: "0px",
-                            opacity: "0%",
-                        }}
-                    >
-                        <DeleteIcon 
+                        <IconButton size="small" 
+                            onClick={(e) => {
+                                openEditLinkDialog(link);
+                                e.currentTarget.style.opacity = "0%"
+                            }}
+                            onFocus={(e) => {
+                                e.currentTarget.style.opacity = "100%"
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.opacity = "0%"
+                            }}
                             sx={{
-                                fontSize: 16, 
-                                color: "error.dark",
-                                opacity: "inherit",
-                            }} 
-                        />
-                    </IconButton>
+                                p: "1px",
+                                ml: 1.5,
+                                mr: 1,
+                                maxWidth: "0px",
+                                maxHeight: "0px",
+                                opacity: "0%",
+                            }}
+                        >
+                            <EditIcon 
+                                sx={{
+                                    fontSize: 16, 
+                                    color: "success.dark",
+                                    opacity: "inherit",
+                                }} 
+                            />
+                        </IconButton>
+                        <IconButton size="small" 
+                            onClick={() => removeLink(link.guid)}
+                            onFocus={(e) => {
+                                e.currentTarget.style.opacity = "100%"
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.opacity = "0%"
+                            }}
+                            sx={{
+                                p: "1px",
+                                ml: 1,
+                                mr: 1,
+                                maxWidth: "0px",
+                                maxHeight: "0px",
+                                opacity: "0%",
+                            }}
+                        >
+                            <DeleteIcon 
+                                sx={{
+                                    fontSize: 16, 
+                                    color: "error.dark",
+                                    opacity: "inherit",
+                                }} 
+                            />
+                        </IconButton>
                 </Stack>
                 );
             }));
@@ -405,9 +490,6 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 sx={{
                     margin: "auto",
                     maxHeight: "fit-content",
-                    // border: 1,
-                    // borderColor: "primary.main",
-                    // borderRadius: 1,
                 }}
             >
                 <Box
@@ -483,12 +565,103 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         ref={addLinkDialogAddButton} 
                         onClick={() => {
                             setAddLinkDialogOpen(false);
-                            addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, addLinkKeywordsField.current.value);
+                            addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, addLinkKeywordsField.current.value.split(" "));
                         }}>
                             Add Link
                         </Button>
                         <Box flexGrow={1} />
                         <Button variant="contained" size="small" ref={addLinkDialogCancelButton} onClick={() => {setAddLinkDialogOpen(false)}}>Cancel</Button>
+                    </Stack>
+                </Box>
+            </Modal>
+            <Modal
+                open={editLinkDialogOpen}
+                disableAutoFocus={true}
+                sx={{
+                    margin: "auto",
+                    maxHeight: "fit-content",
+                }}
+            >
+                <Box
+                    maxWidth="80%"
+                    marginTop="20px"
+                    marginLeft="auto"
+                    marginRight="auto"
+                    maxHeight="fit-content"
+                    bgcolor="background.paper"
+                    padding="10px"
+                    border={1}
+                    borderRadius={1}
+                    borderColor="primary.main"
+                    display="flex"
+                    flexDirection="column"
+                >
+                    <Typography
+                        variant="h6"
+                    >
+                        Edit Link    
+                    </Typography> 
+                    <Box
+                        display="flex"
+                        flexDirection="row"
+                        alignItems="center"
+                    >
+                        <img src={linkFaviconUrl} width="16px" height="16px" style={{marginRight: "5px"}}/>
+                        <Typography
+                            variant="caption"
+                            marginTop="10px"
+                            marginBottom="10px"
+                        >
+                            {`${linkUrl?.hostname}${linkUrl?.pathname}`}
+                        </Typography>
+                    </Box>
+                    <TextField
+                        variant="standard"
+                        size="small"
+                        label="Name"
+                        inputRef={editLinkNameField}
+                        autoFocus={editLinkDialogOpen}
+                        defaultValue={linkName}
+                        onKeyDown={
+                            (e) => {
+                                if (e.key == "Enter") {
+                                    e.preventDefault();
+                                    editLinkDialogAddButton.current.click()
+                                }
+                            }
+                        }
+                    >
+                    </TextField>
+                    <TextField
+                        variant="standard"
+                        size="small"
+                        label="Keywords"
+                        inputRef={editLinkKeywordsField}
+                        defaultValue={linkKeywords}
+                        placeholder="Space-separated Keywords"
+                        onKeyDown={
+                            (e) => {
+                                if (e.key == "Enter") {
+                                    e.preventDefault();
+                                    editLinkDialogAddButton.current.click()
+                                }
+                            }
+                        }
+                    >
+                    </TextField>
+                    <Stack direction="row" spacing={2} marginTop="10px">
+                        <Button 
+                        variant="contained" 
+                        size="small" 
+                        ref={editLinkDialogAddButton} 
+                        onClick={() => {
+                            setEditLinkDialogOpen(false);
+                            editLink(linkGuid, linkUrl as URL, editLinkNameField.current.value, linkFaviconUrl, editLinkKeywordsField.current.value.split(" "));
+                        }}>
+                            Save Link
+                        </Button>
+                        <Box flexGrow={1} />
+                        <Button variant="contained" size="small" ref={editLinkDialogCancelButton} onClick={() => {setEditLinkDialogOpen(false)}}>Cancel</Button>
                     </Stack>
                 </Box>
             </Modal>

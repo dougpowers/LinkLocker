@@ -89,7 +89,7 @@ export interface LinkLockerLink {
 }
 
 export interface LinkLockerLinkList {
-    links: LinkLockerLink[]
+    links: Array<LinkLockerLink>,
 }
 
 export type LinkLockerActiveAccount = {
@@ -377,7 +377,7 @@ const App = () => {
             updateRenderedComponent(ORenderedComponent.Loading);
         }
         //No accounts in account list -> AcctCreate
-        if (getAcctList(config).length<1 || addingNewAcct) {
+        if (getAcctList(config).length < 1 || addingNewAcct) {
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLLockDark48.png",
@@ -387,7 +387,7 @@ const App = () => {
             updateRenderedComponent(ORenderedComponent.AcctCreate);
         }
         //No activeAccount and accountList.length>0 -> Login
-        if (getAcctList(config).length>0 && !activeAccount.guid && !addingNewAcct) {
+        if (getAcctList(config).length > 0 && !activeAccount.guid && !addingNewAcct) {
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLLockDark48.png",
