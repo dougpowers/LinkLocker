@@ -66,7 +66,7 @@ type ActiveAccountReducerAction =
     | {
         type: "updateLinks";
         payload: {
-            newLinkList: LinkLockerLinkList;
+            newLinkDir: LinkLockerLinkDir;
         }
     }
     | {
@@ -82,20 +82,25 @@ interface LinkLockerConfig {
 export interface LinkLockerLink {
     guid: string;
     href: string;
-    favicon?: string;
     name: string;
     timestamp: number;
     tags: Array<string>;
 }
 
-export interface LinkLockerLinkList {
-    links: Array<LinkLockerLink>,
+export type LinkLockerLinkDir = {
+    hosts: Map<string, LinkLockerLinkHost>;
+} 
+
+export type LinkLockerLinkHost = {
+    hostname: string;
+    favicon: string;
+    links: Array<LinkLockerLink>;
 }
 
 export type LinkLockerActiveAccount = {
     guid: string;
     cipherHash: string;
-    linkList: LinkLockerLinkList | null;
+    linkList: LinkLockerLinkDir | null;
 }
 
 //Define the possible states for the four possible rendered components
@@ -129,6 +134,26 @@ const makeSalt = (length: number): string => {
     return result;
 }
 
+export const JsonReplacer = (key: any, value: any) => {
+    if (value instanceof Map) {
+        return {
+            dataType: 'Map',
+            value: Array.from(value.entries()),
+        };
+    } else {
+        return value;
+    }
+}
+
+export const JsonReviver = (key: any, value: any) => {
+    if (typeof value === 'object' && value !== null) {
+        if (value.dataType === 'Map') {
+            return new Map(value.value);
+        }
+    }
+    return value;
+}
+
 //Return an array of account guid/username tuples
 const getAcctList = (config: LinkLockerConfig): [string,string][] => {
     if (config) {
@@ -148,7 +173,7 @@ const App = () => {
     //links added and removed from the ViewLinks component are contemporaneously stored in activeAccount.linkList
     const activeAccountReducer = (activeAccount: LinkLockerActiveAccount, action: ActiveAccountReducerAction): any => {
         if (action.type === "updateLinks") {
-            return {...activeAccount, linkList: action.payload.newLinkList};
+            return {...activeAccount, linkList: action.payload.newLinkDir};
         } else if (action.type === "login") {
             return {guid: action.payload.guid, cipherHash: action.payload.cipherHash, linkList: action.payload.linkList} as LinkLockerActiveAccount;
         }
@@ -161,25 +186,25 @@ const App = () => {
         let updatedAcctList = Array.from(config.accounts);
         switch (action.type) {
             case "newConfig":
-                browser.storage.local.set({ 'config': JSON.stringify(action.payload.newConfig) });
+                browser.storage.local.set({ 'config': JSON.stringify(action.payload.newConfig, JsonReplacer) });
                 setIsLoading(false);
                 return action.payload.newConfig;
             case "newAcct":
                 updatedAcctList.push(action.payload.newAcct);
-                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}) });
+                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
                 return {...config, accounts: updatedAcctList};
             case "newCipher":
                 updatedAcctList.find((v: any, i) => {
                     if (v.guid == action.payload.guid) { v.cipher = action.payload.newCipher; return true; }
                 }) 
-                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}) });
+                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
                 return {...config, accounts: updatedAcctList};
             case "dismissIncognitoWarning":
-                browser.storage.local.set({ 'config': JSON.stringify({...config, incognitoWarningDismissed: true}) });
+                browser.storage.local.set({ 'config': JSON.stringify({...config, incognitoWarningDismissed: true}, JsonReplacer) });
                 return {...config, incognitoWarningDismissed: true};
             case "removeAcct":
                 updatedAcctList.splice(updatedAcctList.findIndex((a: LinkLockerAcct) => {if (a.guid == action.payload.guid) return}), 1);
-                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}) });
+                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
                 return {...config, accounts: updatedAcctList};
         }
     }
@@ -256,7 +281,7 @@ const App = () => {
                 updateFailedLogin(false);
                 //Use argon2 to generate the key (config.account[guid].cipherHash) for AES encryption/decryption of linkList
                 argon2.hash({pass: password, salt: userAcct.cipherSalt, type: argon2.ArgonType.Argon2id}).then((res) => {
-                    let linkList: LinkLockerLinkList | null;
+                    let linkList: LinkLockerLinkDir | null;
                     try {
                         let plainText;
                         //If cipher already exists in config.account[/guid/], load the string and decrypt it with the generated key
@@ -266,7 +291,7 @@ const App = () => {
                             if (userAcct.cipher.iv) { CP.iv = CryptoJS.enc.Hex.parse(userAcct.cipher.iv); }
                             if (userAcct.cipher.s) { CP.salt = CryptoJS.enc.Hex.parse(userAcct.cipher.s); }
                             plainText = CryptoJS.AES.decrypt(CP, res.encoded).toString(CryptoJS.enc.Utf8);
-                            linkList = JSON.parse(plainText) as LinkLockerLinkList;
+                            linkList = JSON.parse(plainText, JsonReviver) as LinkLockerLinkDir;
                         } else {
                         //Otherwise, null out the value for a brand-spanking-new linkList
                             linkList = null;
@@ -281,7 +306,7 @@ const App = () => {
                         cipherHash: res.encoded,
                         linkList: linkList
                     }
-                    window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount));
+                    window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount, JsonReplacer));
                     activeAccountDispatch({type: "login", payload: {guid: newActiveAccount.guid, cipherHash: newActiveAccount.cipherHash, linkList: newActiveAccount.linkList}})
                 });
                 setIsLoading(false);
@@ -310,11 +335,13 @@ const App = () => {
     }
 
     //Update links in the decrypted activeAccount.linkList variable and also the encrypted config.accounts[activeAccount.guid].cipher variable
-    const updateLinks = (linkList: LinkLockerLinkList) => {
+    const updateLinks = (linkDir: LinkLockerLinkDir) => {
+        console.debug("Updating links...");
+        console.debug(linkDir);
         let acct = getAcct(activeAccount!.guid);
-        let newActiveAccountObject: LinkLockerActiveAccount = {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: linkList};
-        window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject));
-        let encrypted = CryptoJS.AES.encrypt(JSON.stringify(linkList), newActiveAccountObject.cipherHash);
+        let newActiveAccountObject: LinkLockerActiveAccount = {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: linkDir};
+        window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject, JsonReplacer));
+        let encrypted = CryptoJS.AES.encrypt(JSON.stringify(linkDir, JsonReplacer), newActiveAccountObject.cipherHash);
         //Create serializable LinkLockerBasicCipherParams from the fresh CryptoJS CipherParams
         acct.cipher = {
             ct: encrypted.ciphertext.toString(CryptoJS.enc.Base64),
@@ -322,7 +349,7 @@ const App = () => {
             s: encrypted.salt.toString()
         }
         configDispatch({type: "newCipher", payload: {guid: acct.guid, newCipher: acct.cipher}})
-        activeAccountDispatch({type: "updateLinks", payload: {newLinkList: linkList}})
+        activeAccountDispatch({type: "updateLinks", payload: {newLinkDir: linkDir}})
     }
 
     //Async function ran on every popup open to get the "config" key from local extension storage and prime the app state
@@ -333,14 +360,14 @@ const App = () => {
         if (storedConfigString) {
             //Try to load config from "config" key
             let loadedConfig: LinkLockerConfig;
-            loadedConfig = JSON.parse(storedConfigString);
+            loadedConfig = JSON.parse(storedConfigString, JsonReviver);
             configDispatch({type: "newConfig", payload: {newConfig: loadedConfig}})
 
             //Try to load session data
             let sessionConfigString = window.localStorage.getItem('sessionConfig');
             if (sessionConfigString) {
                 //Parse session into activeAccount, dispatch, and do nothing else
-                let activeAccount = JSON.parse(sessionConfigString) as LinkLockerActiveAccount;
+                let activeAccount = JSON.parse(sessionConfigString, JsonReviver) as LinkLockerActiveAccount;
                 activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: activeAccount.linkList}})
                 return;
             } else if (loadedConfig.accounts.length > 0) {
@@ -498,7 +525,7 @@ const App = () => {
                         {
                             renderedComponent == RenderedComponent.ViewLinks ?
                             <ViewLinks 
-                                linkList={activeAccount ? activeAccount!["linkList"] : null} 
+                                linkDir={activeAccount ? activeAccount!["linkList"] : null} 
                                 updateLinks={updateLinks} 
                                 logout={logout} 
                                 deleteAcct={deleteAcct} 

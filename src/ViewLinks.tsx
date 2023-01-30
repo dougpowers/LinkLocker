@@ -14,7 +14,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
-import { LinkLockerLinkList, LinkLockerLink } from "./App";
+import { LinkLockerLinkDir, LinkLockerLinkHost, LinkLockerLink, JsonReplacer } from "./App";
 import Fab from "@mui/material/Fab";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -29,29 +29,19 @@ import TextField from "@mui/material/TextField";
 import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
-import { bottomNavigationActionClasses } from "@mui/material";
+import { resourceLimits } from "worker_threads";
 
 declare var __IN_DEBUG__: string;
 declare var __DEBUG_LIST__: LinkLockerLink[];
 
 type Props = {
-    linkList: LinkLockerLinkList | null,
-    updateLinks: (linkList: LinkLockerLinkList) => void,
+    linkDir: LinkLockerLinkDir | null,
+    updateLinks: (linkList: LinkLockerLinkDir) => void,
     logout: () => void;
     deleteAcct: () => void;
 }
 
-type LinkLockerLinkDir = {
-    hosts: Array<LinkLockerLinkHost>;
-} 
-
-type LinkLockerLinkHost = {
-    hostname: string;
-    favicon: string;
-    links: Array<LinkLockerLink>;
-}
-
-const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
+const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) => {
     
     var entryScrollAmount: number = 0;
     var entryScrollInterval: number;
@@ -112,8 +102,26 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
         }
     }
 
+    const dirFromList = (links: LinkLockerLink[], existingDir: LinkLockerLinkDir): LinkLockerLinkDir => {
+        let dir = { hosts: new Map() };
+        links.forEach((link, i) => {
+            let url = new URL(link.href);
+
+            if (dir.hosts.get(url.hostname)) {
+                dir.hosts.get(url.hostname)!.links.push(link);
+            } else {
+                let favicon = existingDir.hosts.get(url.hostname)?.favicon;
+                dir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link]});
+            }
+        })
+
+        return dir;
+    }
+
     const setLink = (link: LinkLockerLink) => {
-        if (link.favicon) setLinkFaviconUrl(link.favicon);
+        let url = new URL(link.href);
+        let favicon = linkDir?.hosts.get(url.hostname)?.favicon;
+        if (favicon) setLinkFaviconUrl(favicon);
         setLinkGuid(link.guid);
         setLinkUrl(new URL(link.href));
         setLinkName(link.name);
@@ -137,8 +145,11 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     }    
 
     const openEditLinkDialog = (link: LinkLockerLink) => {
+        let url = new URL(link.href);
+        let favicon = linkDir?.hosts.get(url.hostname)?.favicon;
+        if (favicon) setLinkFaviconUrl(favicon);
+
         setLinkGuid(link.guid);
-        if (link.favicon) setLinkFaviconUrl(link.favicon);
         setLinkUrl(new URL(link.href));
         setLinkName(link.name);
         if (link.tags.length > 0) {
@@ -157,33 +168,42 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     guid: uuidv4(),
                     href: href.toString(),
                     name: name,
-                    favicon: favicon,
                     timestamp: Date.now(),
                     tags: tags,
                 }
-                if (linkList == null) {
-                    linkList = {links: [
-                        link
-                    ]}
+                let url = new URL(link.href);
+
+                if (linkDir == null) {
+                    // linkDir = {links: [
+                    //     link
+                    // ]}
+                    linkDir = {hosts: new Map()};
+                    linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link]});
                 } else {
-                    linkList.links.push(link);
+                    if (linkDir.hosts.get(url.hostname)) {
+                        linkDir.hosts.get(url.hostname)!.links.push(link);
+                    } else {
+                        linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link]});
+                    }
                 }
-                updateLinks(linkList!);
+                console.debug("Dispatching updateLinks");
+                console.debug(linkDir);
+                updateLinks(linkDir!);
             } else {
             }
         }).catch((err) => {console.debug(err)});
     }
 
-    const editLink = (guid: string, href: URL, name: string, favicon: string, tags: [string]) => {
-        linkList?.links.forEach((link, i) => {
+    const editLink = (guid: string, url: URL, name: string, favicon: string, tags: [string]) => {
+        linkDir!.hosts.get(url.hostname)!.links.forEach((link, i) => {
             if (link.guid == guid) {
-                link.href = href.toString();
+                link.href = url.toString();
                 link.name = name;
                 link.tags = tags;
                 return;
             }
         });
-        updateLinks(linkList!);
+        updateLinks(linkDir!);
     }
 
     const handleHamburgerClick = (e: MouseEvent<HTMLElement>) => {
@@ -197,34 +217,38 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
 
     }
 
-    const removeLink = (guid: string) => {
+    const removeLink = (link: LinkLockerLink) => {
         //Splice out link (compared using timestamp)
-        linkList!.links.splice(linkList!.links!.findIndex((l) => {if (l.guid == guid) {return true;}}), 1);
-        updateLinks(linkList!);
+        let host = linkDir!.hosts.get(new URL(link.href).hostname)!;
+        host.links.splice(host.links.findIndex((l) => {if (l.guid == link.guid) {return true;}}), 1);
+        if (host.links.length == 0) {linkDir!.hosts.delete(host.hostname);}
+        // linkDir!.links.splice(linkDir!.links!.findIndex((l) => {if (l.guid == guid) {return true;}}), 1);
+        updateLinks(linkDir!);
     }
 
     const buildListSorted = (): ReactNode => {
 
-        const renderGroupByHost = (linkList: LinkLockerLinkList, sort?: boolean) => {
-            let dir: LinkLockerLinkDir = { hosts: new Array() }
-            linkList.links.forEach((l) => {
-                let url = new URL(l.href);
-                // if link isn't found in the hosts dir
-                let host = dir.hosts.find((i: LinkLockerLinkHost) => {if (url.hostname == i.hostname) return i;})
-                if (!host) {
-                    //create dir entry and add link
-                    // let entry: LinkLockerLink = {title: l.title, href: l.href, timestamp: l.timestamp}
-                    dir.hosts.push({hostname: url.hostname, favicon: l.favicon ? l.favicon : "", links: [l]});
-                } else {
-                    //add link to host
-                    host.links.push(l);
-                    if (l.favicon) {
-                        host.favicon = l.favicon;
-                    }
-                }
-            })
+        const renderGroupByHost = (linkDir: LinkLockerLinkDir, sort?: boolean) => {
+            // let dir: LinkLockerLinkDir = { hosts: new Array() }
+            // linkDir.links.forEach((l) => {
+            //     let url = new URL(l.href);
+            //     // if link isn't found in the hosts dir
+            //     let host = dir.hosts.find((i: LinkLockerLinkHost) => {if (url.hostname == i.hostname) return i;})
+            //     if (!host) {
+            //         //create dir entry and add link
+            //         // let entry: LinkLockerLink = {title: l.title, href: l.href, timestamp: l.timestamp}
+            //         dir.hosts.push({hostname: url.hostname, favicon: l.favicon ? l.favicon : "", links: [l]});
+            //     } else {
+            //         //add link to host
+            //         host.links.push(l);
+            //         if (l.favicon) {
+            //             host.favicon = l.favicon;
+            //         }
+            //     }
+            // })
+            let hosts = Array.from(linkDir.hosts.values());
             if (sort) {
-                dir.hosts.sort((a,b) => {
+                hosts.sort((a,b) => {
                     let domainsA: string[] = a.hostname.split(".");
                     let domainsB: string[] = b.hostname.split(".");
                     domainsA.pop();
@@ -256,7 +280,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     return sortA.localeCompare(sortB);
                 });
             }
-            return (dir.hosts.map((host, index) => {
+            return (hosts.map((host, index) => {
                     return (
                         <Stack direction="column" sx={{
                             p: 0.12,
@@ -394,7 +418,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                             />
                                         </IconButton>
                                         <IconButton size="small" 
-                                            onClick={() => removeLink(link.guid)}
+                                            onClick={() => removeLink(link)}
                                             onFocus={(e) => {
                                                 e.currentTarget.style.opacity = "100%"
                                             }}
@@ -428,9 +452,14 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
             ));
         }
 
-        const renderFlat = (linkList: LinkLockerLinkList) => {
-            let links = Array.from(linkList.links);
+        const renderFlat = (linkDir: LinkLockerLinkDir) => {
+            let links: Array<LinkLockerLink> = new Array();
+            linkDir.hosts.forEach((v, k) => {
+                links = links.concat(v.links);
+            })
+
             return (links.map((link, i) => {
+                let favicon = linkDir.hosts.get(new URL(link.href).hostname)?.favicon;
                 return (
                 <Stack 
                     direction="row" 
@@ -447,8 +476,8 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     }}
                 >
                     {
-                        link.favicon ?
-                        <img src={link.favicon} width="16px" height="16px" key={link.favicon}></img>
+                        favicon ?
+                        <img src={favicon} width="16px" height="16px" key={favicon}></img>
                         :
                         <LinkIcon sx={{
                             fontSize: 16,
@@ -555,7 +584,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         />
                     </IconButton>
                     <IconButton size="small" 
-                        onClick={() => removeLink(link.guid)}
+                        onClick={() => removeLink(link)}
                         onFocus={(e) => {
                             e.currentTarget.style.opacity = "100%"
                         }}
@@ -584,12 +613,20 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
             }));
         }
 
-        if(linkList != null && linkList.links.length > 0 && searchTerm == "") {
-            return renderGroupByHost(linkList, true);
-        } else if (searchTerm != "" && linkList) {
-            const fuse = new Fuse(linkList.links, {
+        console.debug(linkDir);
+        if(linkDir != null && linkDir.hosts.size > 0 && searchTerm == "") {
+            console.debug("Default - Rendering by host.")
+            return renderGroupByHost(linkDir, true);
+        } else if (searchTerm != "" && linkDir) {
+            let hosts = Array.from(linkDir.hosts.values());
+            let links: Array<LinkLockerLink> = new Array();
+            hosts.forEach((v, i) => {
+                links = links.concat(v.links);
+            });
+
+            const fuse = new Fuse(links, {
                 keys: [
-                    {name: "title", weight: 0.8}, 
+                    {name: "name", weight: 0.8}, 
                     {name: "href", weight: 0.3}, 
                     {name: "tags", weight: 1},
                 ],
@@ -599,15 +636,15 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
 
             const result = fuse.search(searchTerm);
             if (result.length > 0) {
-                return renderFlat({
-                    links: result.map((v, i) => {return v.item;}) as LinkLockerLink[],
-                });
+                return renderFlat(
+                    dirFromList(result.map((v,i) => {return v.item;}) as LinkLockerLink[], linkDir)
+                );
             } else {
                 return (
                     <Typography variant="body2">No results found.</Typography>
                 )
             }
-        } else if ((linkList == null || linkList.links.length == 0)) {
+        } else if ((linkDir == null || linkDir.hosts.size == 0)) {
             return (
                 <Typography variant="body2">No links saved.</Typography>
             )
@@ -643,7 +680,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         fullWidth
                         onFocus={(e) => {e.currentTarget.select()}}
                         defaultValue={
-                            JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "tags"], undefined)
+                            JSON.stringify(linkDir, JsonReplacer)
                         }
                         sx={{pading: "1",border: "1",borderRadius: "1",borderColor: "primary.main"}}
                         size="small"
@@ -958,7 +995,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                     divider
                                     onClick={() => {
                                         __DEBUG_LIST__.forEach((v, i) => {
-                                            addLink(new URL(v.href), v.name, v.favicon ? v.favicon : "", v.tags);
+                                            // addLink(new URL(v.href), v.name, v.favicon ? v.favicon : "", v.tags);
                                         });
                                         handleHamburgerClose();
                                     }}
