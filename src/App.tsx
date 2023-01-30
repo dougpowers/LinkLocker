@@ -83,9 +83,9 @@ export interface LinkLockerLink {
     guid: string;
     href: string;
     favicon?: string;
-    title: string;
+    name: string;
     timestamp: number;
-    keywords: Array<string>;
+    tags: Array<string>;
 }
 
 export interface LinkLockerLinkList {

@@ -55,11 +55,11 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
 
     const addLinkButton: any = createRef();
     const addLinkNameField: any = createRef();
-    const addLinkKeywordsField: any = createRef();
+    const addLinkTagsField: any = createRef();
     const addLinkDialogAddButton: any = createRef();
     const addLinkDialogCancelButton: any = createRef();
     const editLinkNameField: any = createRef();
-    const editLinkKeywordsField: any = createRef();
+    const editLinkTagsField: any = createRef();
     const editLinkDialogAddButton: any = createRef();
     const editLinkDialogCancelButton: any = createRef();
     const searchField: any = createRef();
@@ -75,34 +75,60 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
     const [linkFaviconUrl, setLinkFaviconUrl] = useState("");
     const [linkUrl, setLinkUrl] = useState<null | URL>(null);
     const [linkName, setLinkName] = useState("");
-    const [linkKeywords, setLinkKeywords] = useState("");
+    const [linkTags, setLinkTags] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+
+    const trimTitle = (title: string, url: URL) => {
+        let domains = url.hostname.split(".");
+        let domain = "";
+
+        domains.pop();
+
+        while (true) {
+            if (domains.length == 0) {
+                break;
+            }
+            let topDomain: string = domains.pop() as string;
+            if (topDomain?.length > 2) {
+                domain = topDomain;
+                break;
+            }
+        }
+
+        if (domain) {
+            let regex = new RegExp(`(.*)( \\| | - )[^|\\-]*(${domain})[^|\\-]*$`, "i");
+            let matches = title.match(regex);
+            if (matches) {
+                console.debug(matches)
+                return matches[1];
+            } else {
+                return title;
+            }
+        } else {
+            return title;
+        }
+    }
 
     const setLink = (link: LinkLockerLink) => {
         if (link.favicon) setLinkFaviconUrl(link.favicon);
         setLinkGuid(link.guid);
         setLinkUrl(new URL(link.href));
-        setLinkName(link.title);
-        if (linkKeywords.length > 0) {
-            setLinkKeywords(link.keywords.join(" "));
+        setLinkName(link.name);
+        if (link.tags.length > 0) {
+            setLinkTags(link.tags.join(" "));
         } else {
-            setLinkKeywords("");
+            setLinkTags("");
         }
     }    
 
     const openAddLinkDialog = () => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
-            // let link = {
-            //     href: tabs.at(0)!.url!,
-            //     title: tabs.at(0)!.title!,
-            //     favicon: tabs.at(0)!.favIconUrl!, 
-            //     timestamp: Date.now(), 
-            //     keywords: []
-            // };
+            console.debug(tabs.at(0));
             setLinkFaviconUrl(tabs.at(0)!.favIconUrl!);
-            setLinkUrl(new URL(tabs.at(0)!.url!));
-            setLinkName(tabs.at(0)!.title!);
-            setLinkKeywords("");
+            let url = new URL(tabs.at(0)!.url!);
+            setLinkUrl(url);
+            setLinkName(trimTitle(tabs.at(0)!.title!, url));
+            setLinkTags("");
             setAddLinkDialogOpen(true);
         }).catch((err) => {console.debug(err)});
     }    
@@ -111,29 +137,26 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
         setLinkGuid(link.guid);
         if (link.favicon) setLinkFaviconUrl(link.favicon);
         setLinkUrl(new URL(link.href));
-        setLinkName(link.title);
-        if (link.keywords.length > 0) {
-            setLinkKeywords(link.keywords.join(" "))
-            // setLinkKeywords(Array.from(link.keywords).reduce((pv, cv, i) => {
-            //     return `${pv} ${cv}`;
-            // }));
+        setLinkName(link.name);
+        if (link.tags.length > 0) {
+            setLinkTags(link.tags.join(" "))
         } else {
-            setLinkKeywords("");
+            setLinkTags("");
         }
         setEditLinkDialogOpen(true);
     }
 
-    const addLink = (href: URL, name: string, favicon: string, keywords: string[]) => {
-        console.debug(`Adding link with keywords ${JSON.stringify(keywords)}`)
+    const addLink = (href: URL, name: string, favicon: string, tags: string[]) => {
+        console.debug(`Adding link with keywords ${JSON.stringify(tags)}`)
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
             if (tabs.at(0) != undefined && tabs.at(0)!.url) {
                 let link = {
                     guid: uuidv4(),
                     href: href.toString(),
-                    title: name,
+                    name: name,
                     favicon: favicon,
                     timestamp: Date.now(),
-                    keywords: keywords,
+                    tags: tags,
                 }
                 if (linkList == null) {
                     linkList = {links: [
@@ -148,12 +171,12 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
         }).catch((err) => {console.debug(err)});
     }
 
-    const editLink = (guid: string, href: URL, name: string, favicon: string, keywords: [string]) => {
+    const editLink = (guid: string, href: URL, name: string, favicon: string, tags: [string]) => {
         linkList?.links.forEach((link, i) => {
             if (link.guid == guid) {
                 link.href = href.toString();
-                link.title = name;
-                link.keywords = keywords;
+                link.name = name;
+                link.tags = tags;
                 return;
             }
         });
@@ -259,7 +282,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                         maxWidth={constants.LINK_ENTRY_MAX_WIDTH}
                                         sx={{m: 0}} 
                                         alignItems="center" 
-                                        key={link.title+link.timestamp.toString()}
+                                        key={link.name+link.timestamp.toString()}
                                         onMouseOver={function (e) {
                                             (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
                                         }}
@@ -275,12 +298,11 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                             whiteSpace: "nowrap",
                                             overflow: "hidden",
                                         }}>
-                                            {link.title}
+                                            {link.name}
                                         </Link>
                                         <Box flexGrow={1} />
                                         <IconButton size="small" 
                                             onMouseEnter={(e) => {
-                                                console.debug(e.currentTarget.parentElement);
                                                 setLink(link);
                                                 setPopoverAnchorEl(e.currentTarget.parentElement);
                                             }}
@@ -383,7 +405,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     maxWidth={constants.LINK_ENTRY_MAX_WIDTH}
                     sx={{mt: "2px"}} 
                     alignItems="center" 
-                    key={link.title+link.timestamp.toString()}
+                    key={link.name+link.timestamp.toString()}
                     onMouseOver={function (e) {
                         (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
                     }}
@@ -408,7 +430,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                     }}>
-                        {link.title}
+                        {link.name}
                     </Link>
                     <Box flexGrow={1} />
                         <IconButton size="small" 
@@ -476,7 +498,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 keys: [
                     {name: "title", weight: 0.8}, 
                     {name: "href", weight: 0.3}, 
-                    {name: "keywords", weight: 1},
+                    {name: "tags", weight: 1},
                 ],
                 useExtendedSearch: true,
                 threshold: 0.4,
@@ -525,7 +547,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 >
                     <Typography paragraph variant="caption">
                         {
-                            JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "keywords"], undefined)
+                            JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "tags"], undefined)
                         }
                     </Typography>
                 </Modal>
@@ -593,9 +615,9 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     <TextField
                         variant="standard"
                         size="small"
-                        label="Keywords"
-                        inputRef={addLinkKeywordsField}
-                        placeholder="Space-separated Keywords"
+                        label="Tags"
+                        inputRef={addLinkTagsField}
+                        placeholder="Space-separated Tags"
                         onKeyDown={
                             (e) => {
                                 if (e.key == "Enter") {
@@ -613,7 +635,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         ref={addLinkDialogAddButton} 
                         onClick={() => {
                             setAddLinkDialogOpen(false);
-                            addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, addLinkKeywordsField.current.value.split(" "));
+                            addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, addLinkTagsField.current.value.split(" "));
                         }}>
                             Add Link
                         </Button>
@@ -683,10 +705,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                     <TextField
                         variant="standard"
                         size="small"
-                        label="Keywords"
-                        inputRef={editLinkKeywordsField}
-                        defaultValue={linkKeywords}
-                        placeholder="Space-separated Keywords"
+                        label="Tags"
+                        inputRef={editLinkTagsField}
+                        defaultValue={linkTags}
+                        placeholder="Space-separated Tags"
                         onKeyDown={
                             (e) => {
                                 if (e.key == "Enter") {
@@ -704,7 +726,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         ref={editLinkDialogAddButton} 
                         onClick={() => {
                             setEditLinkDialogOpen(false);
-                            editLink(linkGuid, linkUrl as URL, editLinkNameField.current.value, linkFaviconUrl, editLinkKeywordsField.current.value.split(" "));
+                            editLink(linkGuid, linkUrl as URL, editLinkNameField.current.value, linkFaviconUrl, editLinkTagsField.current.value.split(" "));
                         }}>
                             Save Link
                         </Button>
@@ -732,7 +754,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                 <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
                     guid: {linkGuid} <br />
                     href: {linkUrl?.toString()} <br />
-                    keywords: {linkKeywords}
+                    tags: {linkTags}
                 </Typography>
             </Popover>
             <Stack 
@@ -830,7 +852,7 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                     divider
                                     onClick={() => {
                                         __DEBUG_LIST__.forEach((v, i) => {
-                                            addLink(new URL(v.href), v.title, v.favicon ? v.favicon : "", v.keywords);
+                                            addLink(new URL(v.href), v.name, v.favicon ? v.favicon : "", v.tags);
                                         });
                                         handleHamburgerClose();
                                     }}
