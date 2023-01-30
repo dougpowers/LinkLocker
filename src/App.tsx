@@ -99,14 +99,15 @@ export type LinkLockerActiveAccount = {
 }
 
 //Define the possible states for the four possible rendered components
-const ORenderedComponent = {
+// const ORenderedComponent = {
+const RenderedComponent = {
     Loading: 0,
     Login: 1,
     AcctCreate: 2,
     ViewLinks: 3,
 }
 
-type RenderedComponent = typeof ORenderedComponent[keyof typeof ORenderedComponent];
+// type RenderedComponent = typeof ORenderedComponent[keyof typeof ORenderedComponent];
 
 //Set default theme to dark
 export const darkTheme = createTheme({
@@ -141,6 +142,8 @@ const getAcctList = (config: LinkLockerConfig): [string,string][] => {
 
 const App = () => {
 
+    const [isLoading, setIsLoading] = useState(true);
+
     //State reducer for activeAccount. An empty guid is taken to mean that there is no user logged in.
     //links added and removed from the ViewLinks component are contemporaneously stored in activeAccount.linkList
     const activeAccountReducer = (activeAccount: LinkLockerActiveAccount, action: ActiveAccountReducerAction): any => {
@@ -159,6 +162,7 @@ const App = () => {
         switch (action.type) {
             case "newConfig":
                 browser.storage.local.set({ 'config': JSON.stringify(action.payload.newConfig) });
+                setIsLoading(false);
                 return action.payload.newConfig;
             case "newAcct":
                 updatedAcctList.push(action.payload.newAcct);
@@ -183,7 +187,7 @@ const App = () => {
     //Set warning as dismissed so modal doesn't get rendered before config load. Value is set to false 
     // in empty config in getConfigsFromStorage function should the storedConfig actually be empty.
     const [config, configDispatch] = useReducer(configReducer, {incognitoWarningDismissed: true, accounts: new Array()}); 
-    const [renderedComponent, updateRenderedComponent] = useState(ORenderedComponent.Loading);
+    const [renderedComponent, updateRenderedComponent] = useState(RenderedComponent.Loading);
     const [activeAccount, activeAccountDispatch] = useReducer(activeAccountReducer, {guid: "", cipherHash: "", links: null});
     //Global state that the last login failed. Used by Login component to put the passwordInput into fail style.
     const [failedLogin, updateFailedLogin] = useState(false);
@@ -280,6 +284,7 @@ const App = () => {
                     window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount));
                     activeAccountDispatch({type: "login", payload: {guid: newActiveAccount.guid, cipherHash: newActiveAccount.cipherHash, linkList: newActiveAccount.linkList}})
                 });
+                setIsLoading(false);
             }).catch((err) => {
                 //Login failed. Error-style the passwordInput
                 updateFailedLogin(true);
@@ -339,9 +344,10 @@ const App = () => {
                 activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: activeAccount.linkList}})
                 return;
             } else if (loadedConfig.accounts.length > 0) {
-                //
+                // setIsLoading(false);
                 return;
             } else {
+                // setIsLoading(false);
                 return;
             }
         } else {
@@ -352,12 +358,15 @@ const App = () => {
                 accounts: new Array(),
             };
             configDispatch({type: "newConfig", payload: {newConfig: newConfig}})
+            // setIsLoading(false);
             return;
         }
     }
 
     useEffect(() => {
-        console.debug(__IN_DEBUG__);
+        if (__IN_DEBUG__) {
+            console.debug("LinkLocker is in debug mode...");
+        }
         getConfigsFromStorage();
     }, []);
 
@@ -368,43 +377,48 @@ const App = () => {
             setIncognitoModalOpen(true);
         } else {
             setIncognitoModalOpen(false);
-            if (renderedComponent == ORenderedComponent.AcctCreate) {
+            if (renderedComponent == RenderedComponent.AcctCreate) {
                 acctCreateRef.current?.focusUsernameField()
             }
         }
+        console.debug(isLoading);
         //No config loaded -> Loading
-        if (!config) {
-            updateRenderedComponent(ORenderedComponent.Loading);
+        if (!config || isLoading) {
+            console.debug("Setting Loading state")
+            updateRenderedComponent(RenderedComponent.Loading);
         }
         //No accounts in account list -> AcctCreate
-        if (getAcctList(config).length < 1 || addingNewAcct) {
+        if ((getAcctList(config).length < 1 || addingNewAcct) && !isLoading) {
+            console.debug("Setting AcctCreate state")
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLLockDark48.png",
                     "96": "icons/LLLockDark96.png"
                 }
             });
-            updateRenderedComponent(ORenderedComponent.AcctCreate);
+            updateRenderedComponent(RenderedComponent.AcctCreate);
         }
         //No activeAccount and accountList.length>0 -> Login
-        if (getAcctList(config).length > 0 && !activeAccount.guid && !addingNewAcct) {
+        if (getAcctList(config).length > 0 && !activeAccount.guid && !addingNewAcct && !isLoading) {
+            console.debug("Setting Login state")
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLLockDark48.png",
                     "96": "icons/LLLockDark96.png"
                 }
             });
-            updateRenderedComponent(ORenderedComponent.Login);
+            updateRenderedComponent(RenderedComponent.Login);
         }
         //activeAccount specified -> ViewLinks
         if (activeAccount.guid && !addingNewAcct) {
+            console.debug("Setting ViewLinks state")
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLUnlockDark48.png",
                     "96": "icons/LLUnlockDark96.png"
                 }
             });
-            updateRenderedComponent(ORenderedComponent.ViewLinks);
+            updateRenderedComponent(RenderedComponent.ViewLinks);
         }
     })
 
@@ -464,25 +478,25 @@ const App = () => {
                         </Typography>
                         {/* Conditionally render the three different components and a loading indicator */}
                         {
-                            renderedComponent == ORenderedComponent.Loading || renderedComponent == null ? 
+                            renderedComponent == RenderedComponent.Loading || renderedComponent == null ? 
                             <LoadingButton loading variant="outlined">Loading...</LoadingButton>
                             :
                             null
                         }
                         {
-                            renderedComponent == ORenderedComponent.AcctCreate ?
+                            renderedComponent == RenderedComponent.AcctCreate ?
                             <AcctCreate addAcct={addAcct} ref={acctCreateRef} />
                             :
                             null
                         }
                         {
-                            renderedComponent == ORenderedComponent.Login ?
+                            renderedComponent == RenderedComponent.Login ?
                             <Login failedLogin={failedLogin} tryLogin={tryLogin} availableLogins={getAcctList(config)} showAcctCreate={showAcctCreate}/>
                             :
                             null
                         }
                         {
-                            renderedComponent == ORenderedComponent.ViewLinks ?
+                            renderedComponent == RenderedComponent.ViewLinks ?
                             <ViewLinks 
                                 linkList={activeAccount ? activeAccount!["linkList"] : null} 
                                 updateLinks={updateLinks} 

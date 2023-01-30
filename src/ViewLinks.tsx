@@ -52,6 +52,9 @@ type LinkLockerLinkHost = {
 }
 
 const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
+    
+    var entryScrollAmount: number = 0;
+    var entryScrollInterval: number;
 
     const addLinkButton: any = createRef();
     const addLinkNameField: any = createRef();
@@ -290,14 +293,44 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                             (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "0%";})
                                         }}
                                     >
-                                        <Link variant="caption" href={link.href} key={link.href+link.timestamp.toString()} sx={{
-                                            pr: 1,
-                                            pt: 0.25,
-                                            ml: 2,
-                                            lineHeight: 1,
-                                            whiteSpace: "nowrap",
-                                            overflow: "hidden",
-                                        }}>
+                                        <Link 
+                                            variant="caption" 
+                                            href={link.href} 
+                                            key={link.href+link.timestamp.toString()} 
+                                            onMouseEnter={(e) => {
+                                                var target = e.currentTarget;
+                                                var scrollMax = target.scrollWidth - target.offsetWidth;
+
+                                                if (scrollMax > 0) {
+                                                    console.debug("Scrolling entry...");
+                                                    window.clearInterval(entryScrollInterval);
+                                                    entryScrollInterval = window.setInterval(() => {
+                                                        if (entryScrollAmount < constants.ENTRY_SCROLL_DELAY) {
+                                                            entryScrollAmount += constants.ENTRY_SCROLL_INCREMENT
+                                                        } else if (entryScrollAmount < (scrollMax + constants.ENTRY_SCROLL_DELAY)) {
+                                                            target.scrollLeft = entryScrollAmount;
+                                                            entryScrollAmount += constants.ENTRY_SCROLL_INCREMENT;
+                                                        } else {
+                                                            target.scrollLeft = entryScrollAmount;
+                                                            window.clearInterval(entryScrollInterval);
+                                                        }
+                                                    }, constants.ENTRY_SCROLL_INTERVAL);
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                entryScrollAmount = 0;
+                                                e.currentTarget.scrollLeft = 0;
+                                                window.clearInterval(entryScrollInterval)
+                                            }}
+                                            sx={{
+                                                pr: 1,
+                                                pt: 0.25,
+                                                ml: 2,
+                                                lineHeight: 1,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                            }}
+                                        >
                                             {link.name}
                                         </Link>
                                         <Box flexGrow={1} />
@@ -422,13 +455,42 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                             color: "common.white"
                         }}/>
                     }
-                    <Link variant="caption" href={link.href} key={link.href+link.timestamp.toString()} sx={{
-                        pr: 1,
-                        pt: 0.25,
-                        ml: 2,
-                        lineHeight: 1,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
+                    <Link 
+                        variant="caption" 
+                        href={link.href} 
+                        key={link.href+link.timestamp.toString()} 
+                        onMouseEnter={(e) => {
+                            var target = e.currentTarget;
+                            var scrollMax = target.scrollWidth - target.offsetWidth;
+
+                            if (scrollMax > 0) {
+                                console.debug("Scrolling entry...");
+                                window.clearInterval(entryScrollInterval);
+                                entryScrollInterval = window.setInterval(() => {
+                                    if (entryScrollAmount < constants.ENTRY_SCROLL_DELAY) {
+                                        entryScrollAmount += constants.ENTRY_SCROLL_INCREMENT
+                                    } else if (entryScrollAmount < (scrollMax + constants.ENTRY_SCROLL_DELAY)) {
+                                        target.scrollLeft = entryScrollAmount;
+                                        entryScrollAmount += constants.ENTRY_SCROLL_INCREMENT;
+                                    } else {
+                                        target.scrollLeft = entryScrollAmount;
+                                        window.clearInterval(entryScrollInterval);
+                                    }
+                                }, constants.ENTRY_SCROLL_INTERVAL);
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            entryScrollAmount = 0;
+                            e.currentTarget.scrollLeft = 0;
+                            window.clearInterval(entryScrollInterval)
+                        }}
+                        sx={{
+                            pr: 1,
+                            pt: 0.25,
+                            ml: 2,
+                            lineHeight: 1,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
                     }}>
                         {link.name}
                     </Link>

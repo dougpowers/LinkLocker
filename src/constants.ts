@@ -9,3 +9,6 @@ export const LINK_ENTRY_MAX_WIDTH = '320px';
 export const INNER_MIN_HEIGHT = '200px';
 export const SCROLLER_MAX_HEIGHT = '410px';
 export const PALETTE_MODE = 'dark';
+export const ENTRY_SCROLL_INCREMENT = 3;
+export const ENTRY_SCROLL_INTERVAL = 20;
+export const ENTRY_SCROLL_DELAY = 40;
