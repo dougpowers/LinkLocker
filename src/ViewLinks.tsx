@@ -433,59 +433,90 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         {link.name}
                     </Link>
                     <Box flexGrow={1} />
-                        <IconButton size="small" 
-                            onClick={(e) => {
-                                openEditLinkDialog(link);
-                                e.currentTarget.style.opacity = "0%"
-                            }}
-                            onFocus={(e) => {
-                                e.currentTarget.style.opacity = "100%"
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.opacity = "0%"
-                            }}
+                    <IconButton size="small" 
+                        onMouseEnter={(e) => {
+                            setLink(link);
+                            setPopoverAnchorEl(e.currentTarget.parentElement);
+                        }}
+                        onMouseLeave={(e) => {
+                            setPopoverAnchorEl(null);
+                        }}
+                        onFocus={(e) => {
+                            e.currentTarget.style.opacity = "100%"
+                        }}
+                        onBlur={(e) => {
+                            e.currentTarget.style.opacity = "0%"
+                        }}
+                        sx={{
+                            p: "1px",
+                            ml: 1.5,
+                            mr: 1,
+                            maxWidth: "0px",
+                            maxHeight: "0px",
+                            opacity: "0%",
+                        }}
+                    >
+                        <InfoIcon 
                             sx={{
-                                p: "1px",
-                                ml: 1.5,
-                                mr: 1,
-                                maxWidth: "0px",
-                                maxHeight: "0px",
-                                opacity: "0%",
-                            }}
-                        >
-                            <EditIcon 
-                                sx={{
-                                    fontSize: 16, 
-                                    color: "success.dark",
-                                    opacity: "inherit",
-                                }} 
-                            />
-                        </IconButton>
-                        <IconButton size="small" 
-                            onClick={() => removeLink(link.guid)}
-                            onFocus={(e) => {
-                                e.currentTarget.style.opacity = "100%"
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.opacity = "0%"
-                            }}
+                                fontSize: 16, 
+                                color: "common.white",
+                                opacity: "inherit",
+                            }} 
+                        />
+                    </IconButton>
+                    <IconButton size="small" 
+                        onClick={(e) => {
+                            openEditLinkDialog(link);
+                            e.currentTarget.style.opacity = "0%"
+                        }}
+                        onFocus={(e) => {
+                            e.currentTarget.style.opacity = "100%"
+                        }}
+                        onBlur={(e) => {
+                            e.currentTarget.style.opacity = "0%"
+                        }}
+                        sx={{
+                            p: "1px",
+                            ml: 1,
+                            mr: 1,
+                            maxWidth: "0px",
+                            maxHeight: "0px",
+                            opacity: "0%",
+                        }}
+                    >
+                        <EditIcon 
                             sx={{
-                                p: "1px",
-                                ml: 1,
-                                mr: 1,
-                                maxWidth: "0px",
-                                maxHeight: "0px",
-                                opacity: "0%",
-                            }}
-                        >
-                            <DeleteIcon 
-                                sx={{
-                                    fontSize: 16, 
-                                    color: "error.dark",
-                                    opacity: "inherit",
-                                }} 
-                            />
-                        </IconButton>
+                                fontSize: 16, 
+                                color: "success.dark",
+                                opacity: "inherit",
+                            }} 
+                        />
+                    </IconButton>
+                    <IconButton size="small" 
+                        onClick={() => removeLink(link.guid)}
+                        onFocus={(e) => {
+                            e.currentTarget.style.opacity = "100%"
+                        }}
+                        onBlur={(e) => {
+                            e.currentTarget.style.opacity = "0%"
+                        }}
+                        sx={{
+                            p: "1px",
+                            ml: 1,
+                            mr: 1,
+                            maxWidth: "0px",
+                            maxHeight: "0px",
+                            opacity: "0%",
+                        }}
+                    >
+                        <DeleteIcon 
+                            sx={{
+                                fontSize: 16, 
+                                color: "error.dark",
+                                opacity: "inherit",
+                            }} 
+                        />
+                    </IconButton>
                 </Stack>
                 );
             }));
@@ -545,11 +576,21 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         }
                     }}
                 >
-                    <Typography paragraph variant="caption">
+                    <TextField
+                        multiline
+                        fullWidth
+                        onFocus={(e) => {e.currentTarget.select()}}
+                        defaultValue={
+                            JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "tags"], undefined)
+                        }
+                        sx={{pading: "1",border: "1",borderRadius: "1",borderColor: "primary.main"}}
+                        size="small"
+                    ></TextField>
+                    {/* <Typography paragraph variant="caption">
                         {
                             JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "tags"], undefined)
                         }
-                    </Typography>
+                    </Typography> */}
                 </Modal>
                 :
                 null
@@ -836,7 +877,6 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                         }}
                     >
                         {__IN_DEBUG__ ? 
-                            <>
                                 <MenuItem
                                     key="dump_json"
                                     onClick={() => {
@@ -847,6 +887,10 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                 >
                                     Dump JSON...
                                 </MenuItem>
+                            :
+                            null
+                        }
+                        {__IN_DEBUG__ ? 
                                 <MenuItem
                                     key="add_debug_links"
                                     divider
@@ -860,7 +904,6 @@ const ViewLinks = ({linkList, updateLinks, logout, deleteAcct}: Props) => {
                                 >
                                     Load Debug List...
                                 </MenuItem>
-                            </>
                             :
                             null
                         }

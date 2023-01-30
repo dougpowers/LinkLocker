@@ -3,7 +3,7 @@
 - [x] Find " | (domain)" or " - (domain)" at end of window titles and snip for Add Link dialog
 - [x] Change 'title' references to 'name'
 - [x] Change 'keyword' references to 'tag'
-- [ ] Change JSON export from typography to highlighted multiline input
+- [x] Change JSON export from typography to highlighted multiline input
 
 ## Major tasks
 - [x] Implement link editing and implement edit icon
