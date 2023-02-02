@@ -503,6 +503,16 @@ const App = () => {
                         <Typography variant="h5">
                             LinkLocker
                         </Typography>
+                        {
+                            browser.extension.inIncognitoContext ?
+                            null
+                            :
+                            <Typography
+                                variant="caption" 
+                                color="error.main"
+                                mt="0px"
+                            >Browser is not in icognito mode</Typography>
+                        }
                         {/* Conditionally render the three different components and a loading indicator */}
                         {
                             renderedComponent == RenderedComponent.Loading || renderedComponent == null ? 

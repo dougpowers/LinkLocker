@@ -4,13 +4,15 @@
 - [x] Change 'title' references to 'name'
 - [x] Change 'keyword' references to 'tag'
 - [x] Change JSON export from typography to highlighted multiline input
+- [x] Add non-incognito warning
+- [x] Create appropriate \__DEBUG_LIST__ for debugging and README screenshots. Should showcase use cases.
 
 ## Major tasks
 - [x] Implement link editing and implement edit icon
 - [x] Implement info popover for entries and implement "i" entry icon 
 - [x] Implement entry scrolling
 - [x] Refactor LinkLockerLinkList into hosts and links to save on encrypted favicon data
-- [ ] Add search specifiers like 'site:'/'host:', 'tag:', and 'name:'
+- [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'
 - [ ] Add sort options 
 - [ ] Add JSON text entry for bookmark import
 - [ ] Add timeout for non-icognito sessions (this is not a secure method as credentials will persist in storage until LinkLocker is opened after the timeout)

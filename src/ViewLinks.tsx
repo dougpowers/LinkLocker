@@ -14,7 +14,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
-import { LinkLockerLinkDir, LinkLockerLinkHost, LinkLockerLink, JsonReplacer } from "./App";
+import { LinkLockerLinkDir, LinkLockerLinkHost, LinkLockerLink, JsonReplacer, JsonReviver } from "./App";
 import Fab from "@mui/material/Fab";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -30,6 +30,7 @@ import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
 import { resourceLimits } from "worker_threads";
+import { Z_NO_COMPRESSION } from "zlib";
 
 declare var __IN_DEBUG__: string;
 declare var __DEBUG_LIST__: LinkLockerLink[];
@@ -994,9 +995,8 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                     key="add_debug_links"
                                     divider
                                     onClick={() => {
-                                        __DEBUG_LIST__.forEach((v, i) => {
-                                            // addLink(new URL(v.href), v.name, v.favicon ? v.favicon : "", v.tags);
-                                        });
+                                        let linkDir = JSON.parse(JSON.stringify(__DEBUG_LIST__, JsonReplacer), JsonReviver);
+                                        updateLinks(linkDir);
                                         handleHamburgerClose();
                                     }}
                                     sx={{color: "secondary.main"}}
