@@ -14,7 +14,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
-import { LinkLockerLinkDir, LinkLockerLinkHost, LinkLockerLink, JsonReplacer, JsonReviver } from "./App";
+import { LinkLockerLinkDir, LinkLockerLink, JsonReplacer, JsonReviver } from "./App";
 import Fab from "@mui/material/Fab";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -29,8 +29,6 @@ import TextField from "@mui/material/TextField";
 import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
-import { resourceLimits } from "worker_threads";
-import { Z_NO_COMPRESSION } from "zlib";
 
 declare var __IN_DEBUG__: string;
 declare var __DEBUG_LIST__: LinkLockerLink[];
@@ -50,6 +48,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const addLinkButton: any = createRef();
     const addLinkNameField: any = createRef();
     const addLinkTagsField: any = createRef();
+    const addHostTagsField: any = createRef();
     const addLinkDialogAddButton: any = createRef();
     const addLinkDialogCancelButton: any = createRef();
     const editLinkNameField: any = createRef();
@@ -71,6 +70,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const [linkName, setLinkName] = useState("");
     const [linkTags, setLinkTags] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [newHost, setNewHost] = useState(false);
 
     const trimTitle = (title: string, url: URL) => {
         let domains = url.hostname.split(".");
@@ -93,7 +93,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
             let regex = new RegExp(`(.*)( \\| | - )[^|\\-]*(${domain})[^|\\-]*$`, "i");
             let matches = title.match(regex);
             if (matches) {
-                console.debug(matches)
                 return matches[1];
             } else {
                 return title;
@@ -119,7 +118,19 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         return dir;
     }
 
-    const setLink = (link: LinkLockerLink) => {
+    const getHostAndLinkTags = (link: LinkLockerLink, hostTags: Array<string>): Array<string> => {
+        if (hostTags.length > 0) {
+            let dedupTags = hostTags.filter(((v, i, a) => {
+                if (link.tags.find((lv, li, la) => {lv == v})) { return false; }
+            }))
+
+            return link.tags.concat(dedupTags);
+        } else {
+            return link.tags;
+        }
+    }
+
+    const setCurrentLink = (link: LinkLockerLink) => {
         let url = new URL(link.href);
         let favicon = linkDir?.hosts.get(url.hostname)?.favicon;
         if (favicon) setLinkFaviconUrl(favicon);
@@ -135,12 +146,24 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
 
     const openAddLinkDialog = () => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
-            console.debug(tabs.at(0));
             setLinkFaviconUrl(tabs.at(0)!.favIconUrl!);
             let url = new URL(tabs.at(0)!.url!);
             setLinkUrl(url);
+
+            let host = linkDir?.hosts.get(url.hostname);
+            let hostTags = host?.tags;
+            if (host) {
+                setNewHost(false);
+                if (hostTags) {
+                    setLinkTags(hostTags.join(" "));
+                } else {
+                    setLinkTags("");
+                }
+            } else {
+                setNewHost(true);
+                setLinkTags("");
+            }
             setLinkName(trimTitle(tabs.at(0)!.title!, url));
-            setLinkTags("");
             setAddLinkDialogOpen(true);
         }).catch((err) => {console.debug(err)});
     }    
@@ -148,23 +171,21 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const openEditLinkDialog = (link: LinkLockerLink) => {
         let url = new URL(link.href);
         let favicon = linkDir?.hosts.get(url.hostname)?.favicon;
+        let hostTags = linkDir?.hosts.get(url.hostname)?.tags;
         if (favicon) setLinkFaviconUrl(favicon);
 
         setLinkGuid(link.guid);
         setLinkUrl(new URL(link.href));
         setLinkName(link.name);
-        if (link.tags.length > 0) {
-            setLinkTags(link.tags.join(" "))
-        } else {
-            setLinkTags("");
-        }
+        setLinkTags(link.tags.join(" "));
         setEditLinkDialogOpen(true);
     }
 
-    const addLink = (href: URL, name: string, favicon: string, tags: string[]) => {
-        console.debug(`Adding link with keywords ${JSON.stringify(tags)}`)
+    const addLink = (href: URL, name: string, favicon: string, tags: Array<string>, newHostTags: Array<string>) => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
             if (tabs.at(0) != undefined && tabs.at(0)!.url) {
+                tags = tags.concat(newHostTags);
+                console.debug(`Adding link with tags ${JSON.stringify(tags)}`)
                 let link = {
                     guid: uuidv4(),
                     href: href.toString(),
@@ -172,30 +193,26 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     timestamp: Date.now(),
                     tags: tags,
                 }
+                
                 let url = new URL(link.href);
 
                 if (linkDir == null) {
-                    // linkDir = {links: [
-                    //     link
-                    // ]}
                     linkDir = {hosts: new Map()};
-                    linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link]});
+                    linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link], tags: newHostTags});
                 } else {
                     if (linkDir.hosts.get(url.hostname)) {
                         linkDir.hosts.get(url.hostname)!.links.push(link);
                     } else {
-                        linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link]});
+                        linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link], tags: newHostTags});
                     }
                 }
-                console.debug("Dispatching updateLinks");
-                console.debug(linkDir);
                 updateLinks(linkDir!);
             } else {
             }
         }).catch((err) => {console.debug(err)});
     }
 
-    const editLink = (guid: string, url: URL, name: string, favicon: string, tags: [string]) => {
+    const editLink = (guid: string, url: URL, name: string, favicon: string, tags: Array<string>) => {
         linkDir!.hosts.get(url.hostname)!.links.forEach((link, i) => {
             if (link.guid == guid) {
                 link.href = url.toString();
@@ -310,7 +327,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                                 var scrollMax = target.scrollWidth - target.offsetWidth;
 
                                                 if (scrollMax > 0) {
-                                                    console.debug("Scrolling entry...");
                                                     window.clearInterval(entryScrollInterval);
                                                     entryScrollInterval = window.setInterval(() => {
                                                         if (entryScrollAmount < constants.ENTRY_SCROLL_DELAY) {
@@ -344,7 +360,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                         <Box flexGrow={1} />
                                         <IconButton size="small" 
                                             onMouseEnter={(e) => {
-                                                setLink(link);
+                                                setCurrentLink(link);
                                                 setPopoverAnchorEl(e.currentTarget.parentElement);
                                             }}
                                             onMouseLeave={(e) => {
@@ -477,7 +493,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             var scrollMax = target.scrollWidth - target.offsetWidth;
 
                             if (scrollMax > 0) {
-                                console.debug("Scrolling entry...");
                                 window.clearInterval(entryScrollInterval);
                                 entryScrollInterval = window.setInterval(() => {
                                     if (entryScrollAmount < constants.ENTRY_SCROLL_DELAY) {
@@ -510,7 +525,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     <Box flexGrow={1} />
                     <IconButton size="small" 
                         onMouseEnter={(e) => {
-                            setLink(link);
+                            setCurrentLink(link);
                             setPopoverAnchorEl(e.currentTarget.parentElement);
                         }}
                         onMouseLeave={(e) => {
@@ -597,9 +612,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
             }));
         }
 
-        console.debug(linkDir);
         if(linkDir != null && linkDir.hosts.size > 0 && searchTerm == "") {
-            console.debug("Default - Rendering by host.")
             return renderGroupByHost(linkDir, true);
         } else if (searchTerm != "" && linkDir) {
             let hosts = Array.from(linkDir.hosts.values());
@@ -750,6 +763,10 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         label="Tags"
                         inputRef={addLinkTagsField}
                         placeholder="Space-separated Tags"
+                        defaultValue={linkTags}
+                        onFocus={(e) => {
+                            e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+                        }}
                         onKeyDown={
                             (e) => {
                                 if (e.key == "Enter") {
@@ -760,6 +777,29 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         }
                     >
                     </TextField>
+                    {
+                        newHost ?
+                        <TextField
+                            variant="standard"
+                            size="small"
+                            label="Host Tags"
+                            onFocus={(e) => {
+                                e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+                            }}
+                            inputRef={addHostTagsField}
+                            placeholder="Default tags for this host"
+                            onKeyDown={
+                                (e) => {
+                                    if (e.key == "Enter") {
+                                        e.preventDefault();
+                                        addLinkDialogAddButton.current.click()
+                                    }
+                                }
+                            }
+                        ></TextField>
+                        :
+                        null
+                    }
                     <Stack direction="row" spacing={2} marginTop="10px">
                         <Button 
                         variant="contained" 
@@ -767,12 +807,17 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         ref={addLinkDialogAddButton} 
                         onClick={() => {
                             setAddLinkDialogOpen(false);
-                            addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, addLinkTagsField.current.value.split(" "));
+                            if (newHost) {
+                                addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, Array.from(addLinkTagsField.current.value.split(" ")), Array.from(addHostTagsField.current.value.split(" ")));
+                            } else {
+                                addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, Array.from(addLinkTagsField.current.value.split(" ")), new Array());
+                            }
+                            setNewHost(false);
                         }}>
                             Add Link
                         </Button>
                         <Box flexGrow={1} />
-                        <Button variant="contained" size="small" ref={addLinkDialogCancelButton} onClick={() => {setAddLinkDialogOpen(false)}}>Cancel</Button>
+                        <Button variant="contained" size="small" ref={addLinkDialogCancelButton} onClick={() => {setAddLinkDialogOpen(false); setNewHost(false);}}>Cancel</Button>
                     </Stack>
                 </Box>
             </Modal>
@@ -841,6 +886,9 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         inputRef={editLinkTagsField}
                         defaultValue={linkTags}
                         placeholder="Space-separated Tags"
+                        onFocus={(e) => {
+                            e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+                        }}
                         onKeyDown={
                             (e) => {
                                 if (e.key == "Enter") {

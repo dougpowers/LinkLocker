@@ -16,21 +16,7 @@ import * as constants from "./constants";
 import Modal from "@mui/material/Modal";
 
 declare var __IN_DEBUG__: string;
-
-interface LinkLockerAcct {
-    username?: string;   
-    guid: string;
-    authSalt:string;
-    authHash: string;
-    cipher?: LinkLockerCipherParams;
-    cipherSalt: string;
-}
-
-interface LinkLockerCipherParams {
-    ct: string;
-    iv?: string;
-    s?: string;
-};
+declare var __VERSION__: string;
 
 type ConfigReducerAction = 
     | {
@@ -79,6 +65,21 @@ interface LinkLockerConfig {
     accounts: Array<LinkLockerAcct>,
 }
 
+interface LinkLockerAcct {
+    username?: string;   
+    guid: string;
+    authSalt:string;
+    authHash: string;
+    cipher?: LinkLockerCipherParams;
+    cipherSalt: string;
+}
+
+interface LinkLockerCipherParams {
+    ct: string;
+    iv?: string;
+    s?: string;
+};
+
 export interface LinkLockerLink {
     guid: string;
     href: string;
@@ -94,6 +95,7 @@ export type LinkLockerLinkDir = {
 export type LinkLockerLinkHost = {
     hostname: string;
     favicon: string;
+    tags?: Array<string>;
     links: Array<LinkLockerLink>;
 }
 
@@ -344,8 +346,6 @@ const App = () => {
 
     //Update links in the decrypted activeAccount.linkList variable and also the encrypted config.accounts[activeAccount.guid].cipher variable
     const updateLinks = (linkDir: LinkLockerLinkDir) => {
-        console.debug("Updating links...");
-        console.debug(linkDir);
         let acct = getAcct(activeAccount!.guid);
         let newActiveAccountObject: LinkLockerActiveAccount = {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: linkDir};
         window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject, JsonReplacer));
@@ -399,9 +399,6 @@ const App = () => {
     }
 
     useEffect(() => {
-        if (__IN_DEBUG__) {
-            console.debug("LinkLocker is in debug mode...");
-        }
         getConfigsFromStorage();
     }, []);
 
@@ -416,15 +413,12 @@ const App = () => {
                 acctCreateRef.current?.focusUsernameField()
             }
         }
-        console.debug(isLoading);
         //No config loaded -> Loading
         if (!config || isLoading) {
-            console.debug("Setting Loading state")
             updateRenderedComponent(RenderedComponent.Loading);
         }
         //No accounts in account list -> AcctCreate
         if ((getAcctList(config).length < 1 || addingNewAcct) && !isLoading) {
-            console.debug("Setting AcctCreate state")
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLLockDark48.png",
@@ -435,7 +429,6 @@ const App = () => {
         }
         //No activeAccount and accountList.length>0 -> Login
         if (getAcctList(config).length > 0 && !activeAccount.guid && !addingNewAcct && !isLoading) {
-            console.debug("Setting Login state")
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLLockDark48.png",
@@ -446,7 +439,6 @@ const App = () => {
         }
         //activeAccount specified -> ViewLinks
         if (activeAccount.guid && !addingNewAcct) {
-            console.debug("Setting ViewLinks state")
             browser.browserAction.setIcon({
                 path: {
                     "48": "icons/LLUnlockDark48.png",
@@ -552,6 +544,14 @@ const App = () => {
                             null
                         }
                     </Stack>
+                    {
+                        __IN_DEBUG__ ?
+                        <Stack width="100%" marginTop="0.2rem" flexDirection="row" justifyContent="right">
+                            <Typography variant="caption" color="secondary.main">LinkLocker Debug v{__VERSION__}</Typography>
+                        </Stack>
+                        :
+                        null
+                    }
                 </Box>
             </ThemeProvider>
         </>
