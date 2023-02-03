@@ -12,10 +12,10 @@
 - [x] Implement info popover for entries and implement "i" entry icon 
 - [x] Implement entry scrolling
 - [x] Refactor LinkLockerLinkList into hosts and links to save on encrypted favicon data
-- [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'
+- [x] Add 'npm run ziptest' for .zip easy loading as an unsigned addon (add browser_specific_settings.gecko.id to ziptest)
+- [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:'
 - [ ] Add sort options 
 - [ ] Add JSON text entry for bookmark import
 - [ ] Add timeout for non-icognito sessions (this is not a secure method as credentials will persist in storage until LinkLocker is opened after the timeout)
 - [ ] Add omnibox functionality
-
-- [ ] Add 'npm run ziptest' for .zip easy loading as an unsigned addon (add browser_specific_settings.gecko.id to ziptest)
+- [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)

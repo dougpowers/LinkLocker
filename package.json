@@ -1,6 +1,6 @@
 {
   "name": "link-locker",
-  "version": "0.1.5",
+  "version": "0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,13 @@
     "builddev": "cross-env NODE_ENV='development' webpack --config webpack/webpack.config.js",
     "runprod": "cross-env WEB_EXT_SOURCE_DIR=\"dist\" WEB_EXT_ARTIFACTS_DIR=\"dist/web-ext-artifacts\" WEB_EXT_FIREFOX=\"C:\\Program Files\\Firefox Developer Edition\\firefox.exe\" npx web-ext run -u=\"about:debugging#/runtime/this-firefox\"",
     "rundev": "cross-env WEB_EXT_SOURCE_DIR=\"build\" WEB_EXT_ARTIFACTS_DIR=\"build/web-ext-artifacts\" WEB_EXT_FIREFOX=\"C:\\Program Files\\Firefox Developer Edition\\firefox.exe\" npx web-ext run -u=\"about:debugging#/runtime/this-firefox\"",
-    "export": "cross-env WEB_EXT_SOURCE_DIR=\"dist\" WEB_EXT_ARTIFACTS_DIR=\"dist/web-ext-artifacts\" WEB_EXT_FIREFOX=\"C:\\Program Files\\Firefox Developer Edition\\firefox.exe\" npx web-ext build --overwrite-dest"
+    "export": "cross-env WEB_EXT_SOURCE_DIR=\"dist\" WEB_EXT_ARTIFACTS_DIR=\"dist/web-ext-artifacts\" WEB_EXT_FIREFOX=\"C:\\Program Files\\Firefox Developer Edition\\firefox.exe\" npx web-ext build --overwrite-dest",
+    "preziptestdev": "node setGeckoId.js -a build",
+    "ziptestdev": "cross-env WEB_EXT_SOURCE_DIR=\"build\" WEB_EXT_ARTIFACTS_DIR=\"build/web-ext-artifacts\" npx web-ext build --overwrite-dest",
+    "postziptestdev": "node setGeckoId.js -r build",
+    "preziptestprod": "node setGeckoId.js -a dist",
+    "ziptestprod": "cross-env WEB_EXT_SOURCE_DIR=\"dist\" WEB_EXT_ARTIFACTS_DIR=\"dist/web-ext-artifacts\" npx web-ext build --overwrite-dest",
+    "postziptestprod": "node setGeckoId.js -r dist"
   },
   "keywords": [],
   "author": "",

@@ -291,7 +291,15 @@ const App = () => {
                             if (userAcct.cipher.iv) { CP.iv = CryptoJS.enc.Hex.parse(userAcct.cipher.iv); }
                             if (userAcct.cipher.s) { CP.salt = CryptoJS.enc.Hex.parse(userAcct.cipher.s); }
                             plainText = CryptoJS.AES.decrypt(CP, res.encoded).toString(CryptoJS.enc.Utf8);
-                            linkList = JSON.parse(plainText, JsonReviver) as LinkLockerLinkDir;
+                            let linkObject = JSON.parse(plainText, JsonReviver);
+                            if (linkObject.links) {
+                                console.error("Old configuration found. Nulling links.");
+                                linkList = null;
+                            } else if (linkObject.hosts) {
+                                linkList = linkObject as LinkLockerLinkDir;
+                            } else {
+                                linkList = null;
+                            }
                         } else {
                         //Otherwise, null out the value for a brand-spanking-new linkList
                             linkList = null;
