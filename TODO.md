@@ -15,6 +15,7 @@
 - [x] Add 'npm run ziptest' for .zip easy loading as an unsigned addon (add browser_specific_settings.gecko.id to ziptest)
 - [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:'
 - [ ] Add sort options 
+- [ ] Add host-dependent tags to apply to all links of that host
 - [ ] Add JSON text entry for bookmark import
 - [ ] Add timeout for non-icognito sessions (this is not a secure method as credentials will persist in storage until LinkLocker is opened after the timeout)
 - [ ] Add omnibox functionality

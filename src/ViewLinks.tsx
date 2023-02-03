@@ -230,23 +230,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const buildListSorted = (): ReactNode => {
 
         const renderGroupByHost = (linkDir: LinkLockerLinkDir, sort?: boolean) => {
-            // let dir: LinkLockerLinkDir = { hosts: new Array() }
-            // linkDir.links.forEach((l) => {
-            //     let url = new URL(l.href);
-            //     // if link isn't found in the hosts dir
-            //     let host = dir.hosts.find((i: LinkLockerLinkHost) => {if (url.hostname == i.hostname) return i;})
-            //     if (!host) {
-            //         //create dir entry and add link
-            //         // let entry: LinkLockerLink = {title: l.title, href: l.href, timestamp: l.timestamp}
-            //         dir.hosts.push({hostname: url.hostname, favicon: l.favicon ? l.favicon : "", links: [l]});
-            //     } else {
-            //         //add link to host
-            //         host.links.push(l);
-            //         if (l.favicon) {
-            //             host.favicon = l.favicon;
-            //         }
-            //     }
-            // })
             let hosts = Array.from(linkDir.hosts.values());
             if (sort) {
                 hosts.sort((a,b) => {
@@ -676,21 +659,29 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         }
                     }}
                 >
-                    <TextField
-                        multiline
-                        fullWidth
-                        onFocus={(e) => {e.currentTarget.select()}}
-                        defaultValue={
-                            JSON.stringify(linkDir, JsonReplacer)
-                        }
-                        sx={{pading: "1",border: "1",borderRadius: "1",borderColor: "primary.main"}}
-                        size="small"
-                    ></TextField>
-                    {/* <Typography paragraph variant="caption">
-                        {
-                            JSON.stringify(linkList?.links, ["guid", "href", "title", "favicon", "timestamp", "tags"], undefined)
-                        }
-                    </Typography> */}
+                    <Box
+                        sx={{
+                            margin: "1rem",
+                            border: "1",
+                            borderRadius: "1",
+                            borderColor: "primary.main",
+                            backgroundColor: "rgba(0,0,0,255)"
+                        }}
+                    >
+                        <TextField
+                            multiline
+                            onFocus={(e) => {e.currentTarget.select()}}
+                            defaultValue={
+                                JSON.stringify(linkDir, JsonReplacer)
+                            }
+                            sx={{
+                                height: "100%",
+                                width: "100%"
+                            }}
+                            size="small"
+                            maxRows={10}
+                        />
+                    </Box>
                 </Modal>
                 :
                 null

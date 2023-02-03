@@ -1,6 +1,7 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
+const npm_package_json = require('../package.json');
 
 const JsonReplacer = (key, value) => {
     if (value instanceof Map) {
@@ -108,7 +109,20 @@ switch (process.env.NODE_ENV) {
             },
             plugins: [
                 new CopyPlugin({
-                    patterns: [{from: ".", to: ".", context: "static"}]
+                    patterns: [
+                        {from: "./icons/*", to: "./icons/", context: "static"},
+                        {from: "index.html", to: "index.html", context: "static"},
+                        {
+                            from: "manifest.json", 
+                            to: "manifest.json", 
+                            context: "static",
+                            transform(content, absoluteFrom) {
+                                let manifest = JSON.parse(content);
+                                manifest.version = npm_package_json.version;
+                                return JSON.stringify(manifest, null, 4);
+                            }
+                        }
+                    ]
                 }),
                 new webpack.DefinePlugin({
                     __IN_DEBUG__: JSON.stringify(true),
