@@ -15,7 +15,8 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import * as constants from "./constants";
 import Modal from "@mui/material/Modal";
 
-declare var __IN_DEBUG__: string;
+declare var __IN_DEBUG__: boolean;
+declare var __DEBUG_LIST__: LinkLockerLinkDir;
 declare var __VERSION__: string;
 
 type ConfigReducerAction = 
@@ -399,6 +400,7 @@ const App = () => {
     }
 
     useEffect(() => {
+        if (__IN_DEBUG__) console.debug(__DEBUG_LIST__);
         getConfigsFromStorage();
     }, []);
 

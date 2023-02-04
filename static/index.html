@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html>
+    <meta charset="UTF-8">
     <head>
         <style type="text/css">
-            :root {
-                max-height: 600px;
-            }
             body {
                 min-width: 310px;
                 max-width: 420px;
@@ -12,15 +10,12 @@
                 overflow-y: hidden;
                 display: flex;
                 flex-direction: column;
-            }
-            .scroller {
-                display: flex;
-                overflow: hidden;
+                scrollbar-width: none;
             }
         </style>
     </head>
     <body>
-        <div id="reactapp" class="scroller"></div>
-        <script src="main.js"></script>
+        <div id="reactapp"></div>
+        <script src="main.js" charset="UTF-8"></script>
     </body>
 </html>

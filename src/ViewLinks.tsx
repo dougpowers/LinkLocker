@@ -30,8 +30,9 @@ import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
 
-declare var __IN_DEBUG__: string;
-declare var __DEBUG_LIST__: LinkLockerLink[];
+declare var __IN_DEBUG__: boolean;
+// declare var __DEBUG_LIST__: LinkLockerLink[];
+declare var __DEBUG_LIST__: LinkLockerLinkDir;
 
 type Props = {
     linkDir: LinkLockerLinkDir | null,
@@ -185,7 +186,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
             if (tabs.at(0) != undefined && tabs.at(0)!.url) {
                 tags = tags.concat(newHostTags);
-                console.debug(`Adding link with tags ${JSON.stringify(tags)}`)
                 let link = {
                     guid: uuidv4(),
                     href: href.toString(),
@@ -246,226 +246,21 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
 
     const buildListSorted = (): ReactNode => {
 
-        const renderGroupByHost = (linkDir: LinkLockerLinkDir, sort?: boolean) => {
-            let hosts = Array.from(linkDir.hosts.values());
-            if (sort) {
-                hosts.sort((a,b) => {
-                    let domainsA: string[] = a.hostname.split(".");
-                    let domainsB: string[] = b.hostname.split(".");
-                    domainsA.pop();
-                    domainsB.pop();
-                    let sortA: string;
-                    let sortB: string;
-                    while (true) {
-                        if (domainsA.length == 1) {
-                            sortA = domainsA.at(0) as string;
-                            break;
-                        }
-                        let domain = domainsA.pop() as string;
-                        if (domain.length > 2) {
-                            sortA = domain;
-                            break;
-                        }
-                    }
-                    while (true) {
-                        if (domainsB.length == 1) {
-                            sortB = domainsB.at(0) as string;
-                            break;
-                        }
-                        let domain = domainsB.pop() as string;
-                        if (domain.length > 2) {
-                            sortB = domain;
-                            break;
-                        }
-                    }
-                    return sortA.localeCompare(sortB);
-                });
+        const getLinkEntry = (link: LinkLockerLink, favicon: (string| null | undefined)): ReactNode => {
+            let icon: ReactNode;
+            if (favicon == null) {
+                icon = null;
+            } else if (favicon == undefined) {
+                icon = <LinkIcon sx={{fontSize: 16, color: "common.white"}}/>
+            } else {
+                icon = <img src={favicon} width="16px" height="16px" key={favicon}></img>;
             }
-            return (hosts.map((host, index) => {
-                    return (
-                        <Stack direction="column" sx={{
-                            p: 0.12,
-                            m: 0.12
-                        }} justifyItems="left" alignItems="left" key={index}>
-                            <Stack direction="row" justifyItems="left" sx={{m: 0.12, p: 0.12}} alignItems="center" key={host.hostname}>
-                                {
-                                    host.favicon ?
-                                    <img src={host.favicon} width="16px" height="16px" key={host.favicon}></img>
-                                    :
-                                    <LinkIcon sx={{
-                                        fontSize: 16,
-                                        color: "common.white"
-                                    }}/>
-                                }
-                                <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
-                                    {host.hostname}
-                                </Typography>
-                            </Stack>
-                            <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
-                            {host.links.map((link) => {
-                                return (
-                                    <Stack 
-                                        direction="row" 
-                                        justifyItems="left" 
-                                        maxWidth={constants.LINK_ENTRY_MAX_WIDTH}
-                                        sx={{m: 0}} 
-                                        alignItems="center" 
-                                        key={link.name+link.timestamp.toString()}
-                                        onMouseOver={function (e) {
-                                            (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
-                                        }}
-                                        onMouseOut={function (e) {
-                                            (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "0%";})
-                                        }}
-                                    >
-                                        <Link 
-                                            variant="caption" 
-                                            href={link.href} 
-                                            key={link.href+link.timestamp.toString()} 
-                                            onMouseEnter={(e) => {
-                                                var target = e.currentTarget;
-                                                var scrollMax = target.scrollWidth - target.offsetWidth;
-
-                                                if (scrollMax > 0) {
-                                                    window.clearInterval(entryScrollInterval);
-                                                    entryScrollInterval = window.setInterval(() => {
-                                                        if (entryScrollAmount < constants.ENTRY_SCROLL_DELAY) {
-                                                            entryScrollAmount += constants.ENTRY_SCROLL_INCREMENT
-                                                        } else if (entryScrollAmount < (scrollMax + constants.ENTRY_SCROLL_DELAY)) {
-                                                            target.scrollLeft = entryScrollAmount;
-                                                            entryScrollAmount += constants.ENTRY_SCROLL_INCREMENT;
-                                                        } else {
-                                                            target.scrollLeft = entryScrollAmount;
-                                                            window.clearInterval(entryScrollInterval);
-                                                        }
-                                                    }, constants.ENTRY_SCROLL_INTERVAL);
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                entryScrollAmount = 0;
-                                                e.currentTarget.scrollLeft = 0;
-                                                window.clearInterval(entryScrollInterval)
-                                            }}
-                                            sx={{
-                                                pr: 1,
-                                                pt: 0.25,
-                                                ml: 2,
-                                                lineHeight: 1,
-                                                whiteSpace: "nowrap",
-                                                overflow: "hidden",
-                                            }}
-                                        >
-                                            {link.name}
-                                        </Link>
-                                        <Box flexGrow={1} />
-                                        <IconButton size="small" 
-                                            onMouseEnter={(e) => {
-                                                setCurrentLink(link);
-                                                setPopoverAnchorEl(e.currentTarget.parentElement);
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                setPopoverAnchorEl(null);
-                                            }}
-                                            onFocus={(e) => {
-                                                e.currentTarget.style.opacity = "100%"
-                                            }}
-                                            onBlur={(e) => {
-                                                e.currentTarget.style.opacity = "0%"
-                                            }}
-                                            sx={{
-                                                p: "1px",
-                                                ml: 1.5,
-                                                mr: 1,
-                                                maxWidth: "0px",
-                                                maxHeight: "0px",
-                                                opacity: "0%",
-                                            }}
-                                        >
-                                            <InfoIcon 
-                                                sx={{
-                                                    fontSize: 16, 
-                                                    color: "common.white",
-                                                    opacity: "inherit",
-                                                }} 
-                                            />
-                                        </IconButton>
-                                        <IconButton size="small" 
-                                            onClick={(e) => {
-                                                openEditLinkDialog(link);
-                                                e.currentTarget.style.opacity = "0%"
-                                            }}
-                                            onFocus={(e) => {
-                                                e.currentTarget.style.opacity = "100%"
-                                            }}
-                                            onBlur={(e) => {
-                                                e.currentTarget.style.opacity = "0%"
-                                            }}
-                                            sx={{
-                                                p: "1px",
-                                                ml: 1,
-                                                mr: 1,
-                                                maxWidth: "0px",
-                                                maxHeight: "0px",
-                                                opacity: "0%",
-                                            }}
-                                        >
-                                            <EditIcon 
-                                                sx={{
-                                                    fontSize: 16, 
-                                                    color: "success.dark",
-                                                    opacity: "inherit",
-                                                }} 
-                                            />
-                                        </IconButton>
-                                        <IconButton size="small" 
-                                            onClick={() => removeLink(link)}
-                                            onFocus={(e) => {
-                                                e.currentTarget.style.opacity = "100%"
-                                            }}
-                                            onBlur={(e) => {
-                                                e.currentTarget.style.opacity = "0%"
-                                            }}
-                                            sx={{
-                                                p: "1px",
-                                                ml: 1,
-                                                mr: 1,
-                                                maxWidth: "0px",
-                                                maxHeight: "0px",
-                                                opacity: "0%",
-                                            }}
-                                        >
-                                            <DeleteIcon 
-                                                sx={{
-                                                    fontSize: 16, 
-                                                    color: "error.dark",
-                                                    opacity: "inherit",
-                                                }} 
-                                            />
-                                        </IconButton>
-                                    </Stack>
-                                );
-                            })}
-                            </Stack>
-                        </Stack>
-                    );
-                }
-            ));
-        }
-
-        const renderFlat = (linkDir: LinkLockerLinkDir) => {
-            let links: Array<LinkLockerLink> = new Array();
-            linkDir.hosts.forEach((v, k) => {
-                links = links.concat(v.links);
-            })
-
-            return (links.map((link, i) => {
-                let favicon = linkDir.hosts.get(new URL(link.href).hostname)?.favicon;
-                return (
+            return (
                 <Stack 
                     direction="row" 
                     justifyItems="left" 
                     maxWidth={constants.LINK_ENTRY_MAX_WIDTH}
-                    sx={{mt: "2px"}} 
+                    sx={{m: 0}} 
                     alignItems="center" 
                     key={link.name+link.timestamp.toString()}
                     onMouseOver={function (e) {
@@ -476,13 +271,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     }}
                 >
                     {
-                        favicon ?
-                        <img src={favicon} width="16px" height="16px" key={favicon}></img>
-                        :
-                        <LinkIcon sx={{
-                            fontSize: 16,
-                            color: "common.white"
-                        }}/>
+                        icon
                     }
                     <Link 
                         variant="caption" 
@@ -519,7 +308,8 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             lineHeight: 1,
                             whiteSpace: "nowrap",
                             overflow: "hidden",
-                    }}>
+                        }}
+                    >
                         {link.name}
                     </Link>
                     <Box flexGrow={1} />
@@ -608,6 +398,99 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         />
                     </IconButton>
                 </Stack>
+            );
+        }
+
+        const renderGroupByHost = (linkDir: LinkLockerLinkDir, sort?: boolean) => {
+            let hosts = Array.from(linkDir.hosts.values());
+            if (sort) {
+                hosts.sort((a,b) => {
+                    let domainsA: Array<string> = a.hostname.split(".");
+                    let domainsB: Array<string> = b.hostname.split(".");
+                    
+                    if (domainsA && domainsA[0] == "") {
+                        return -1;
+                    } else if (domainsB && domainsB[0] == "") {
+                        return 1;
+                    }
+
+                    if (domainsA.length > 1) {
+                        domainsA.pop();
+                    }
+                    if (domainsB.length > 1) {
+                        domainsB.pop();
+                    }
+                    let sortA: string;
+                    let sortB: string;
+                    while (true) {
+                        if (domainsA.length == 1) {
+                            sortA = domainsA.at(0) as string;
+                            break;
+                        }
+                        let domain = domainsA.pop() as string;
+                        if (domain.length > 2) {
+                            sortA = domain;
+                            break;
+                        }
+                    }
+                    while (true) {
+                        if (domainsB.length == 1) {
+                            sortB = domainsB.at(0) as string;
+                            break;
+                        }
+                        console.debug(domainsB);
+                        let domain = domainsB.pop() as string;
+                        if (domain.length > 2) {
+                            sortB = domain;
+                            break;
+                        }
+                    }
+                    return sortA.localeCompare(sortB);
+                });
+            }
+            return (hosts.map((host, index) => {
+                    return (
+                        <Stack direction="column" sx={{
+                            p: 0.12,
+                            m: 0.12
+                        }} justifyItems="left" alignItems="left" key={index}>
+                            <Stack direction="row" justifyItems="left" sx={{m: 0.12, p: 0.12}} alignItems="center" key={host.hostname}>
+                                {
+                                    host.favicon ?
+                                    <img src={host.favicon} width="16px" height="16px" key={host.favicon}></img>
+                                    :
+                                    <LinkIcon sx={{
+                                        fontSize: 16,
+                                        color: "common.white"
+                                    }}/>
+                                }
+                                <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
+                                    {host.hostname}
+                                </Typography>
+                            </Stack>
+                            <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
+                            {host.links.map((link) => {
+                                return (
+                                    getLinkEntry(link, null)
+                                );
+                            })}
+                            </Stack>
+                        </Stack>
+                    );
+                }
+            ));
+        }
+
+        const renderFlat = (linkDir: LinkLockerLinkDir) => {
+            let links: Array<LinkLockerLink> = new Array();
+            linkDir.hosts.forEach((v, k) => {
+                links = links.concat(v.links);
+            })
+
+            return (links.map((link, i) => {
+                let favicon = linkDir.hosts.get(new URL(link.href).hostname)?.favicon;
+                return (
+                    getLinkEntry(link, favicon)
                 );
             }));
         }
@@ -692,7 +575,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                 width: "100%"
                             }}
                             size="small"
-                            maxRows={10}
+                            maxRows={12}
                         />
                     </Box>
                 </Modal>

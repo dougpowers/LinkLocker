@@ -18,8 +18,10 @@
 - [x] Add host-dependent tags to add as default entries for new links to that host
 - [ ] Add edit and delete options for host
 - [ ] Add confirmation dialog when deleting a whole host
+- [x] Fix unicode bookmarks changing to ASCII
 - [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:'
 - [ ] Add sort options 
+- [ ] Add ability to change account password
 - [ ] Add JSON text entry for bookmark import
 - [ ] Add timeout for non-icognito sessions (this is not a secure method as credentials will persist in storage until LinkLocker is opened after the timeout)
 - [ ] Add omnibox functionality
