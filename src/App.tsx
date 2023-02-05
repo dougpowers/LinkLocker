@@ -492,7 +492,10 @@ const App = () => {
                     </Box>
                 </Modal>
                 <Box 
-                    padding="0.8rem" 
+                    paddingTop="0.8rem" 
+                    paddingLeft="0.8rem"
+                    paddingRight="0.8rem"
+                    paddingBottom={__IN_DEBUG__ ? "0px" : "0.8rem"}
                     margin="auto" 
                     // overflow-y="hidden" 
                     maxWidth={constants.MAIN_MAX_WIDTH} 
@@ -545,15 +548,15 @@ const App = () => {
                             null
                         }
                     </Stack>
+                </Box>
                     {
                         __IN_DEBUG__ ?
-                        <Stack width="100%" marginTop="0.2rem" flexDirection="row" justifyContent="right">
-                            <Typography variant="caption" color="secondary.main">LinkLocker Debug v{__VERSION__}</Typography>
+                        <Stack width="100%" flexDirection="row" justifyContent="right">
+                            <Typography variant="caption" marginRight="0.25rem" color="secondary.main">LinkLocker Debug v{__VERSION__}</Typography>
                         </Stack>
                         :
                         null
                     }
-                </Box>
             </ThemeProvider>
         </>
     );

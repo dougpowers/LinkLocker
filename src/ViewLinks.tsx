@@ -29,9 +29,9 @@ import TextField from "@mui/material/TextField";
 import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
+import { FormControl, InputLabel, Select } from "@mui/material";
 
 declare var __IN_DEBUG__: boolean;
-// declare var __DEBUG_LIST__: LinkLockerLink[];
 declare var __DEBUG_LIST__: LinkLockerLinkDir;
 
 type Props = {
@@ -39,6 +39,15 @@ type Props = {
     updateLinks: (linkList: LinkLockerLinkDir) => void,
     logout: () => void;
     deleteAcct: () => void;
+}
+
+const enum SortMode {
+    AlphabeticalByTitle,
+    AlphabeticalByTitleReverse,
+    TimestampOldest,
+    TimestampNewest,
+    AlphabeticalByHost,
+    AlphabeticalByHostReverse,
 }
 
 const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) => {
@@ -60,6 +69,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const editHostModalAddButton: any = createRef();
     const editHostModalDeleteButton: any = createRef();
     const editHostModalCancelButton: any = createRef();
+    const linkDisplayBox: any = createRef();
     const searchField: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
     const hamburgerOpen = Boolean(hamburgerAnchorEl);
@@ -80,6 +90,8 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const [linkTags, setLinkTags] = useState("");
     const [host, setHost] = useState<null | LinkLockerLinkHost>(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [sortMode, setSortMode] = useState<SortMode>(SortMode.AlphabeticalByHost);
+    const [sortModeSelectValue, setSortModeSelectValue] = useState('');
     const [newHost, setNewHost] = useState(false);
 
     const trimTitle = (title: string, url: URL) => {
@@ -296,7 +308,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     direction="row" 
                     justifyItems="left" 
                     maxWidth={constants.LINK_ENTRY_MAX_WIDTH}
-                    sx={{m: 0}} 
+                    sx={{m: 0, mb: "0.1rem", mt: "0.1rem"}} 
                     alignItems="center" 
                     key={link.name+link.timestamp.toString()}
                     onMouseOver={function (e) {
@@ -437,233 +449,272 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
             );
         }
 
-    const renderGroupByHost = (linkDir: LinkLockerLinkDir, sort?: boolean) => {
-        let hosts = Array.from(linkDir.hosts.values());
-        if (sort) {
-            hosts.sort((a,b) => {
-                let domainsA: Array<string> = a.hostname.split(".");
-                let domainsB: Array<string> = b.hostname.split(".");
-                
-                if (domainsA && domainsA[0] == "") {
-                    return -1;
-                } else if (domainsB && domainsB[0] == "") {
-                    return 1;
+        const renderGroupByHost = (linkHosts: LinkLockerLinkHost[]) => {
+            return (linkHosts.map((host, index) => {
+                    return (
+                        <Stack direction="column" sx={{
+                            p: 0.12,
+                            m: 0.12
+                        }} justifyItems="left" alignItems="left" key={index}>
+                            <Stack 
+                                onMouseOver={function (e) {
+                                    (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "inline-flex";})
+                                }}
+                                onMouseOut={function (e) {
+                                    (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "none";})
+                                }}
+                                direction="row" 
+                                justifyItems="left" 
+                                sx={{m: 0.12, p: 0.12}} 
+                                alignItems="center" 
+                                key={host.hostname}
+                            >
+                                {
+                                    host.favicon ?
+                                    <img src={host.favicon} width="16px" height="16px" key={host.favicon}></img>
+                                    :
+                                    <LinkIcon sx={{
+                                        fontSize: 16,
+                                        color: "common.white"
+                                    }}/>
+                                }
+                                <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
+                                    {host.hostname}
+                                </Typography>
+                                <Box flexGrow={1}/>
+                                <IconButton size="small" 
+                                    onMouseEnter={(e) => {
+                                        setHost(host);
+                                        setHostPopoverAnchorEl(e.currentTarget.parentElement);
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        setHostPopoverAnchorEl(null);
+                                    }}
+                                    onFocus={(e) => {
+                                        e.currentTarget.style.opacity = "100%"
+                                    }}
+                                    onBlur={(e) => {
+                                        e.currentTarget.style.opacity = "0%"
+                                    }}
+                                    sx={{
+                                        p: "1px",
+                                        ml: 1.5,
+                                        mr: 1,
+                                        maxWidth: "0px",
+                                        maxHeight: "0px",
+                                        display: "none",
+                                    }}
+                                >
+                                    <InfoIcon 
+                                        sx={{
+                                            fontSize: 16, 
+                                            color: "common.white",
+                                            opacity: "inherit",
+                                        }} 
+                                    />
+                                </IconButton>
+                                <IconButton size="small" 
+                                    onClick={(e) => {
+                                        openEditHostDialog(host.hostname);
+                                        e.currentTarget.style.opacity = "0%"
+                                    }}
+                                    onFocus={(e) => {
+                                        e.currentTarget.style.opacity = "100%"
+                                    }}
+                                    onBlur={(e) => {
+                                        e.currentTarget.style.opacity = "0%"
+                                    }}
+                                    sx={{
+                                        p: "1px",
+                                        ml: 1,
+                                        mr: 1,
+                                        maxWidth: "0px",
+                                        maxHeight: "0px",
+                                        display: "none",
+                                    }}
+                                >
+                                    <EditIcon 
+                                        sx={{
+                                            fontSize: 16, 
+                                            color: "success.dark",
+                                            opacity: "inherit",
+                                        }} 
+                                    />
+                                </IconButton>
+                            </Stack>
+                            <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
+                            {host.links.map((link) => {
+                                return (
+                                    getLinkEntry(link, null)
+                                );
+                            })}
+                            </Stack>
+                        </Stack>
+                    );
                 }
-
-                if (domainsA.length > 1) {
-                    domainsA.pop();
-                }
-                if (domainsB.length > 1) {
-                    domainsB.pop();
-                }
-                let sortA: string;
-                let sortB: string;
-                while (true) {
-                    if (domainsA.length == 1) {
-                        sortA = domainsA.at(0) as string;
-                        break;
-                    }
-                    let domain = domainsA.pop() as string;
-                    if (domain.length > 2) {
-                        sortA = domain;
-                        break;
-                    }
-                }
-                while (true) {
-                    if (domainsB.length == 1) {
-                        sortB = domainsB.at(0) as string;
-                        break;
-                    }
-                    let domain = domainsB.pop() as string;
-                    if (domain.length > 2) {
-                        sortB = domain;
-                        break;
-                    }
-                }
-                return sortA.localeCompare(sortB);
-            });
+            ));
         }
-        return (hosts.map((host, index) => {
+
+        const renderFlat = (linkHosts: LinkLockerLinkHost[]) => {
+            let links: Array<LinkLockerLink> = new Array();
+            linkHosts.forEach((v, k) => {
+                links = links.concat(v.links);
+            })
+
+            return (links.map((link, i) => {
+                // let favicon = linkHosts.get(new URL(link.href).hostname)?.favicon;
+                let favicon = linkHosts.find((v,i,a) => {if (v.hostname == new URL(link.href).hostname) return v;})?.favicon;
                 return (
-                    <Stack direction="column" sx={{
-                        p: 0.12,
-                        m: 0.12
-                    }} justifyItems="left" alignItems="left" key={index}>
-                        <Stack 
-                            onMouseOver={function (e) {
-                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "inline-flex";})
-                            }}
-                            onMouseOut={function (e) {
-                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "none";})
-                            }}
-                            direction="row" 
-                            justifyItems="left" 
-                            sx={{m: 0.12, p: 0.12}} 
-                            alignItems="center" 
-                            key={host.hostname}
-                        >
-                            {
-                                host.favicon ?
-                                <img src={host.favicon} width="16px" height="16px" key={host.favicon}></img>
-                                :
-                                <LinkIcon sx={{
-                                    fontSize: 16,
-                                    color: "common.white"
-                                }}/>
-                            }
-                            <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
-                                {host.hostname}
-                            </Typography>
-                            <Box flexGrow={1}/>
-                            <IconButton size="small" 
-                                onMouseEnter={(e) => {
-                                    setHost(host);
-                                    setHostPopoverAnchorEl(e.currentTarget.parentElement);
-                                }}
-                                onMouseLeave={(e) => {
-                                    setHostPopoverAnchorEl(null);
-                                }}
-                                onFocus={(e) => {
-                                    e.currentTarget.style.opacity = "100%"
-                                }}
-                                onBlur={(e) => {
-                                    e.currentTarget.style.opacity = "0%"
-                                }}
-                                sx={{
-                                    p: "1px",
-                                    ml: 1.5,
-                                    mr: 1,
-                                    maxWidth: "0px",
-                                    maxHeight: "0px",
-                                    display: "none",
-                                }}
-                            >
-                                <InfoIcon 
-                                    sx={{
-                                        fontSize: 16, 
-                                        color: "common.white",
-                                        opacity: "inherit",
-                                    }} 
-                                />
-                            </IconButton>
-                            <IconButton size="small" 
-                                onClick={(e) => {
-                                    openEditHostDialog(host.hostname);
-                                    e.currentTarget.style.opacity = "0%"
-                                }}
-                                onFocus={(e) => {
-                                    e.currentTarget.style.opacity = "100%"
-                                }}
-                                onBlur={(e) => {
-                                    e.currentTarget.style.opacity = "0%"
-                                }}
-                                sx={{
-                                    p: "1px",
-                                    ml: 1,
-                                    mr: 1,
-                                    maxWidth: "0px",
-                                    maxHeight: "0px",
-                                    display: "none",
-                                }}
-                            >
-                                <EditIcon 
-                                    sx={{
-                                        fontSize: 16, 
-                                        color: "success.dark",
-                                        opacity: "inherit",
-                                    }} 
-                                />
-                            </IconButton>
-                            {/* <IconButton size="small" 
-                                onClick={() => {
-                                    setHost(host);
-                                    setHostDeleteDialogOpen(true);
-                                }}
-                                onFocus={(e) => {
-                                    e.currentTarget.style.opacity = "100%"
-                                }}
-                                onBlur={(e) => {
-                                    e.currentTarget.style.opacity = "0%"
-                                }}
-                                sx={{
-                                    p: "1px",
-                                    ml: 1,
-                                    mr: 1,
-                                    maxWidth: "0px",
-                                    maxHeight: "0px",
-                                    display: "none",
-                                }}
-                            >
-                                <DeleteIcon 
-                                    sx={{
-                                        fontSize: 16, 
-                                        color: "error.dark",
-                                        opacity: "inherit",
-                                    }} 
-                                />
-                            </IconButton> */}
-                        </Stack>
-                        <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
-                        {host.links.map((link) => {
-                            return (
-                                getLinkEntry(link, null)
-                            );
-                        })}
-                        </Stack>
-                    </Stack>
+                    getLinkEntry(link, favicon)
                 );
+            }));
+        }
+
+        const sortLinks = (linkDir: LinkLockerLinkDir, sortMode: SortMode): LinkLockerLinkHost[] => {
+            let hosts = Array.from(linkDir.hosts.values());
+            switch (sortMode) {
+                case SortMode.AlphabeticalByHost:
+                    hosts.sort((a,b) => {
+                        let domainsA: Array<string> = a.hostname.split(".");
+                        let domainsB: Array<string> = b.hostname.split(".");
+                        
+                        if (domainsA && domainsA[0] == "") {
+                            return -1;
+                        } else if (domainsB && domainsB[0] == "") {
+                            return 1;
+                        }
+
+                        if (domainsA.length > 1) {
+                            domainsA.pop();
+                        }
+                        if (domainsB.length > 1) {
+                            domainsB.pop();
+                        }
+                        let sortA: string;
+                        let sortB: string;
+                        while (true) {
+                            if (domainsA.length == 1) {
+                                sortA = domainsA.at(0) as string;
+                                break;
+                            }
+                            let domain = domainsA.pop() as string;
+                            if (domain.length > 2) {
+                                sortA = domain;
+                                break;
+                            }
+                        }
+                        while (true) {
+                            if (domainsB.length == 1) {
+                                sortB = domainsB.at(0) as string;
+                                break;
+                            }
+                            let domain = domainsB.pop() as string;
+                            if (domain.length > 2) {
+                                sortB = domain;
+                                break;
+                            }
+                        }
+                        return sortA.localeCompare(sortB);
+                    });
+                    break;
+                case SortMode.AlphabeticalByHostReverse:
+                    hosts.sort((a,b) => {
+                        let domainsA: Array<string> = a.hostname.split(".");
+                        let domainsB: Array<string> = b.hostname.split(".");
+                        
+                        if (domainsA && domainsA[0] == "") {
+                            return 1;
+                        } else if (domainsB && domainsB[0] == "") {
+                            return -1;
+                        }
+
+                        if (domainsA.length > 1) {
+                            domainsA.pop();
+                        }
+                        if (domainsB.length > 1) {
+                            domainsB.pop();
+                        }
+                        let sortA: string;
+                        let sortB: string;
+                        while (true) {
+                            if (domainsA.length == 1) {
+                                sortA = domainsA.at(0) as string;
+                                break;
+                            }
+                            let domain = domainsA.pop() as string;
+                            if (domain.length > 2) {
+                                sortA = domain;
+                                break;
+                            }
+                        }
+                        while (true) {
+                            if (domainsB.length == 1) {
+                                sortB = domainsB.at(0) as string;
+                                break;
+                            }
+                            let domain = domainsB.pop() as string;
+                            if (domain.length > 2) {
+                                sortB = domain;
+                                break;
+                            }
+                        }
+                        return -1*sortA.localeCompare(sortB);
+                    });
+                    break;
+                case SortMode.TimestampNewest:
+                    break;
+                case SortMode.TimestampOldest:
+                
+                    break;
+                case SortMode.AlphabeticalByTitle:
+                
+                    break;
+                case SortMode.AlphabeticalByTitleReverse:
+                
+                    break;
             }
-        ));
-    }
+            return hosts;
+        }
 
-    const renderFlat = (linkDir: LinkLockerLinkDir) => {
-        let links: Array<LinkLockerLink> = new Array();
-        linkDir.hosts.forEach((v, k) => {
-            links = links.concat(v.links);
-        })
+        type RenderFunction = (h: LinkLockerLinkHost[]) => ReactNode;
+        let renderFunction: RenderFunction = renderGroupByHost;
 
-        return (links.map((link, i) => {
-            let favicon = linkDir.hosts.get(new URL(link.href).hostname)?.favicon;
+        if(linkDir != null && linkDir.hosts.size > 0 && searchTerm == "") {
+            return renderFunction(sortLinks(linkDir, sortMode));
+        } else if (searchTerm != "" && linkDir) {
+            renderFunction = renderFlat;
+
+            let hosts = Array.from(linkDir.hosts.values());
+            let links: Array<LinkLockerLink> = new Array();
+            hosts.forEach((v, i) => {
+                links = links.concat(v.links);
+            });
+
+            const fuse = new Fuse(links, {
+                keys: [
+                    {name: "name", weight: 0.8}, 
+                    {name: "href", weight: 0.3}, 
+                    {name: "tags", weight: 1},
+                ],
+                useExtendedSearch: true,
+                threshold: 0.4,
+            });
+
+            const result = fuse.search(searchTerm);
+            if (result.length > 0) {
+                return renderFunction(
+                    Array.from(dirFromList(result.map((v,i) => {return v.item;}) as LinkLockerLink[], linkDir).hosts.values())
+                );
+            } else {
+                return (
+                    <Typography variant="body2">No results found.</Typography>
+                )
+            }
+        } else if ((linkDir == null || linkDir.hosts.size == 0)) {
             return (
-                getLinkEntry(link, favicon)
-            );
-        }));
-    }
-
-    if(linkDir != null && linkDir.hosts.size > 0 && searchTerm == "") {
-        return renderGroupByHost(linkDir, true);
-    } else if (searchTerm != "" && linkDir) {
-        let hosts = Array.from(linkDir.hosts.values());
-        let links: Array<LinkLockerLink> = new Array();
-        hosts.forEach((v, i) => {
-            links = links.concat(v.links);
-        });
-
-        const fuse = new Fuse(links, {
-            keys: [
-                {name: "name", weight: 0.8}, 
-                {name: "href", weight: 0.3}, 
-                {name: "tags", weight: 1},
-            ],
-            useExtendedSearch: true,
-            threshold: 0.4,
-        });
-
-        const result = fuse.search(searchTerm);
-        if (result.length > 0) {
-            return renderFlat(
-                dirFromList(result.map((v,i) => {return v.item;}) as LinkLockerLink[], linkDir)
-            );
-        } else {
-            return (
-                <Typography variant="body2">No results found.</Typography>
+                <Typography variant="body2">No links saved.</Typography>
             )
         }
-    } else if ((linkDir == null || linkDir.hosts.size == 0)) {
-        return (
-            <Typography variant="body2">No links saved.</Typography>
-        )
-    }
 }
 
 useEffect(() => {
@@ -717,6 +768,148 @@ return (
             :
             null
         }
+        <Stack 
+            spacing={0} 
+            minHeight={constants.INNER_MIN_HEIGHT} 
+            minWidth={constants.INNER_MIN_WIDTH}
+            maxWidth={constants.INNER_MAX_WIDTH} 
+            sx={{
+        }}>
+            <Stack direction="row">
+                <TextField
+                    variant="outlined"
+                    size="small"
+                    label="Search Links"
+                    inputRef={searchField}
+                    InputProps={{
+                        endAdornment: <InputAdornment position="end">
+                            <SearchIcon fontSize="small" />
+                            </InputAdornment>,
+                    }}
+                    sx={{marginBottom: "4px"}}
+                    onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); searchField.current.select()}}}
+                />
+                <FormControl sx={{ml: 0.5, width: "8.5rem"}}>
+                    <InputLabel id="sort-select-label">Sort</InputLabel>
+                    <Select
+                        size="small"
+                        labelId="sort-select-label"
+                        id="sort-select"
+                        value={sortMode}
+                        label="Sort"
+                        onChange={(e) => {setSortMode(e.target.value as SortMode); linkDisplayBox.scrollTo(0,0)}}
+                    >
+                        <MenuItem dense value={SortMode.AlphabeticalByHost}>Host A-Z</MenuItem>
+                        <MenuItem dense value={SortMode.AlphabeticalByHostReverse}>Host Z-A</MenuItem>
+                        <MenuItem dense value={SortMode.TimestampNewest}>Newest</MenuItem>
+                        <MenuItem dense value={SortMode.TimestampOldest}>Oldest</MenuItem>
+                        <MenuItem dense value={SortMode.AlphabeticalByTitle}>Name A-Z</MenuItem>
+                        <MenuItem dense value={SortMode.AlphabeticalByTitleReverse}>Name Z-A</MenuItem>
+                    </Select>
+                </FormControl>
+            </Stack>
+            <Box 
+                boxSizing="border-box"
+                sx={{
+                    overflowY: "scroll",
+                    overflowX: "hidden",
+                    scrollbarWidth: "thin",
+                    maxWidth: "100%",
+                    maxHeight: constants.SCROLLER_MAX_HEIGHT,
+                }}
+                itemRef={linkDisplayBox}
+            >
+                {buildListSorted()}
+            </Box>
+            <Box flexGrow={1} />
+            <Stack spacing={1} sx={{mt: 2}} direction="row" alignItems="center">
+                <Fab 
+                    variant="extended"
+                    ref={addLinkButton}
+                    onClick={() => {
+                        openAddLinkDialog();
+                    }}
+                    size="small"
+                    color="primary"
+                    // tabIndex={1}
+                >
+                    <AddIcon />
+                    <Box sx={{pr: 1}}>
+                        Add Link
+                    </Box>
+                </Fab>
+                <Box flexGrow={1} />
+                <IconButton
+                    id="long-button"
+                    onClick={handleHamburgerClick}
+                    size="small"
+                >
+                    <MoreVertIcon />
+                </IconButton>
+                <Menu
+                    id="long-menu"
+                    anchorEl={hamburgerAnchorEl}
+                    open={hamburgerOpen}
+                    onClose={handleHamburgerClose}
+                    PaperProps={{
+                        style: {
+                            maxHeight: 48 * 4.5,
+                            width: "17ch",
+                        },
+                    }}
+                    anchorOrigin={{
+                        vertical: "top",
+                        horizontal: "right"
+                    }}
+                    transformOrigin={{
+                        vertical: "bottom",
+                        horizontal: "right"
+                    }}
+                >
+                    {__IN_DEBUG__ ? 
+                            <MenuItem
+                                key="dump_json"
+                                onClick={() => {
+                                    handleHamburgerClose();
+                                    setJsonDumpOpen(true);
+                                }}
+                                sx={{color: "secondary.main"}}
+                            >
+                                Dump JSON...
+                            </MenuItem>
+                        :
+                        null
+                    }
+                    {__IN_DEBUG__ ? 
+                            <MenuItem
+                                key="add_debug_links"
+                                divider
+                                onClick={() => {
+                                    let linkDir = JSON.parse(JSON.stringify(__DEBUG_LIST__, JsonReplacer), JsonReviver);
+                                    updateLinks(linkDir);
+                                    handleHamburgerClose();
+                                }}
+                                sx={{color: "secondary.main"}}
+                            >
+                                Load Debug List...
+                            </MenuItem>
+                        :
+                        null
+                    }
+                    <MenuItem  
+                        key="delete" 
+                        divider 
+                        onClick={() => {setAcctDeleteDialogOpen(true)}} 
+                        sx={{
+                            color: "error.main",
+                        }}
+                    >
+                        Delete Account...
+                    </MenuItem>
+                    <MenuItem key="logout" onClick={logout} selected>Logout</MenuItem>
+                </Menu>
+            </Stack>
+        </Stack>
         <Modal
             open={editHostModalOpen}
             disableAutoFocus={true}
@@ -1026,6 +1219,27 @@ return (
             </Box>
         </Modal>
         <Popover
+            id="entry-popover"
+            anchorEl={linkPopoverAnchorEl}
+            open={linkPopoverOpen}
+            anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "left"
+            }}
+            transformOrigin={{
+                vertical: "top",
+                horizontal: "left"
+            }}
+            sx={{pointerEvents: "none"}}
+            onClose={() => {setLinkPopoverAnchorEl(null);}}
+            disableRestoreFocus
+        >
+            <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
+                href: {linkUrl?.toString()} <br />
+                tags: {linkTags}
+            </Typography>
+        </Popover>
+        <Popover
             id="host-popover"
             anchorEl={hostPopoverAnchorEl}
             open={hostPopoverOpen}
@@ -1044,181 +1258,36 @@ return (
                 <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
                     tags: {host?.tags?.join(" ")}
                 </Typography>
-            </Popover>
-            <Popover
-                id="entry-popover"
-                anchorEl={linkPopoverAnchorEl}
-                open={linkPopoverOpen}
-                anchorOrigin={{
-                    vertical: "bottom",
-                    horizontal: "left"
-                }}
-                transformOrigin={{
-                    vertical: "top",
-                    horizontal: "left"
-                }}
-                sx={{pointerEvents: "none"}}
-                onClose={() => {setLinkPopoverAnchorEl(null);}}
-                disableRestoreFocus
+        </Popover>
+        <Dialog 
+            open={acctDeleteDialogOpen}
+            onClose={handleAcctDeleteDialogClose}
             >
-                <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
-                    guid: {linkGuid} <br />
-                    href: {linkUrl?.toString()} <br />
-                    tags: {linkTags}
-                </Typography>
-            </Popover>
-            <Stack 
-                spacing={0} 
-                minHeight={constants.INNER_MIN_HEIGHT} 
-                minWidth={constants.INNER_MIN_WIDTH}
-                maxWidth={constants.INNER_MAX_WIDTH} 
-                sx={{
-            }}>
-                <TextField
-                    variant="outlined"
-                    size="small"
-                    label="Search Links"
-                    inputRef={searchField}
-                    InputProps={{
-                        // tabIndex: 2,
-                        endAdornment: <InputAdornment position="end">
-                            <SearchIcon fontSize="small" />
-                        </InputAdornment>,
-                    }}
-                    sx={{marginBottom: "4px"}}
-                    onChange={(e) => {setSearchTerm(searchField.current.value)}}
-                />
-                <Box 
-                    boxSizing="border-box"
-                    sx={{
-                        overflowY: "scroll",
-                        overflowX: "hidden",
-                        scrollbarWidth: "thin",
-                        maxWidth: "100%",
-                        maxHeight: constants.SCROLLER_MAX_HEIGHT,
-                    }}
-                >
-                    {buildListSorted()}
-                </Box>
-                <Box flexGrow={1} />
-                <Stack spacing={1} sx={{mt: 2}} direction="row" alignItems="center">
-                    <Fab 
-                        variant="extended"
-                        ref={addLinkButton}
-                        onClick={() => {
-                            openAddLinkDialog();
-                        }}
-                        size="small"
-                        color="primary"
-                        // tabIndex={1}
-                    >
-                        <AddIcon />
-                        <Box sx={{pr: 1}}>
-                            Add Link
-                        </Box>
-                    </Fab>
-                    <Box flexGrow={1} />
-                    <IconButton
-                        id="long-button"
-                        onClick={handleHamburgerClick}
-                        size="small"
-                    >
-                        <MoreVertIcon />
-                    </IconButton>
-                    <Menu
-                        id="long-menu"
-                        anchorEl={hamburgerAnchorEl}
-                        open={hamburgerOpen}
-                        onClose={handleHamburgerClose}
-                        PaperProps={{
-                            style: {
-                                maxHeight: 48 * 4.5,
-                                width: "17ch",
-                            },
-                        }}
-                        anchorOrigin={{
-                            vertical: "top",
-                            horizontal: "right"
-                        }}
-                        transformOrigin={{
-                            vertical: "bottom",
-                            horizontal: "right"
-                        }}
-                    >
-                        {__IN_DEBUG__ ? 
-                                <MenuItem
-                                    key="dump_json"
-                                    onClick={() => {
-                                        handleHamburgerClose();
-                                        setJsonDumpOpen(true);
-                                    }}
-                                    sx={{color: "secondary.main"}}
-                                >
-                                    Dump JSON...
-                                </MenuItem>
-                            :
-                            null
-                        }
-                        {__IN_DEBUG__ ? 
-                                <MenuItem
-                                    key="add_debug_links"
-                                    divider
-                                    onClick={() => {
-                                        let linkDir = JSON.parse(JSON.stringify(__DEBUG_LIST__, JsonReplacer), JsonReviver);
-                                        updateLinks(linkDir);
-                                        handleHamburgerClose();
-                                    }}
-                                    sx={{color: "secondary.main"}}
-                                >
-                                    Load Debug List...
-                                </MenuItem>
-                            :
-                            null
-                        }
-                        <MenuItem  
-                            key="delete" 
-                            divider 
-                            onClick={() => {setAcctDeleteDialogOpen(true)}} 
-                            sx={{
-                                color: "error.main",
-                            }}
-                        >
-                            Delete Account...
-                        </MenuItem>
-                        <MenuItem key="logout" onClick={logout} selected>Logout</MenuItem>
-                    </Menu>
-                </Stack>
-                <Dialog 
-                    open={acctDeleteDialogOpen}
-                    onClose={handleAcctDeleteDialogClose}
-                    >
-                    <DialogTitle>{"Delete Account?"}</DialogTitle>
-                    <DialogContent sx={{
-                            overflow: "hidden",
-                        }}>
-                        <DialogContentText>Are you sure you want to delete this account?</DialogContentText>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={(e) => {setAcctDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
-                        <Button onClick={(e) => {setAcctDeleteDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
-                    </DialogActions>
-                </Dialog>
-                <Dialog 
-                    open={hostDeleteDialogOpen}
-                    onClose={handleHostDeleteDialogClose}
-                    >
-                    <DialogTitle>{"Delete All Host Links?"}</DialogTitle>
-                    <DialogContent sx={{overflow: "hidden"}}>
-                        <DialogContentText fontSize="1rem">Are you sure you want to delete {host?.links.length} link{(host != undefined && host.links.length) > 1 ? "s" : null} from this host?</DialogContentText>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
-                        <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false); deleteHost()}} sx={{color: 'error.main'}}>DELETE</Button>
-                    </DialogActions>
-                </Dialog>
-            </Stack>
-        </Box>
-    )
-}
+            <DialogTitle>{"Delete Account?"}</DialogTitle>
+            <DialogContent sx={{
+                    overflow: "hidden",
+                }}>
+                <DialogContentText>Are you sure you want to delete this account?</DialogContentText>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={(e) => {setAcctDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
+                <Button onClick={(e) => {setAcctDeleteDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
+            </DialogActions>
+        </Dialog>
+        <Dialog 
+            open={hostDeleteDialogOpen}
+            onClose={handleHostDeleteDialogClose}
+            >
+            <DialogTitle>{"Delete All Host Links?"}</DialogTitle>
+            <DialogContent sx={{overflow: "hidden"}}>
+                <DialogContentText fontSize="1rem">Are you sure you want to delete {host?.links.length} link{(host != undefined && host.links.length) > 1 ? "s" : null} from this host?</DialogContentText>
+            </DialogContent>
+            <DialogActions>
+                <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
+                <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false); deleteHost()}} sx={{color: 'error.main'}}>DELETE</Button>
+            </DialogActions>
+        </Dialog>
+    </Box>
+);}
 
 export default ViewLinks;

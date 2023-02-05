@@ -8,10 +8,10 @@ export const MAIN_MAX_WIDTH = '420px';
 export const INNER_MIN_WIDTH = '290px';
 export const INNER_MAX_WIDTH = '350px';
 export const INNER_MIN_HEIGHT = '220px';
-export const LINK_ENTRY_MAX_WIDTH = '320px';
+export const LINK_ENTRY_MAX_WIDTH = '21rem';
 let scrollerHeight: string;
 if (__IN_DEBUG__) {
-    scrollerHeight = "380px"
+    scrollerHeight = "390px"
 } else {
     scrollerHeight = "410px"
 }
