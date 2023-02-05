@@ -20,3 +20,4 @@ export const PALETTE_MODE = 'dark';
 export const ENTRY_SCROLL_INCREMENT = 3;
 export const ENTRY_SCROLL_INTERVAL = 20;
 export const ENTRY_SCROLL_DELAY = 40;
+export const ASSUMED_LINK_BUTTON_BAR_WIDTH = 30;

@@ -299,10 +299,10 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     alignItems="center" 
                     key={link.name+link.timestamp.toString()}
                     onMouseOver={function (e) {
-                        (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
+                        (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "inline-flex"})
                     }}
                     onMouseOut={function (e) {
-                        (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "0%";})
+                        (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "none";})
                     }}
                 >
                     {
@@ -314,7 +314,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         key={link.href+link.timestamp.toString()} 
                         onMouseEnter={(e) => {
                             var target = e.currentTarget;
-                            var scrollMax = target.scrollWidth - target.offsetWidth;
+                            var scrollMax = target.scrollWidth - target.offsetWidth + constants.ASSUMED_LINK_BUTTON_BAR_WIDTH;
 
                             if (scrollMax > 0) {
                                 window.clearInterval(entryScrollInterval);
@@ -368,7 +368,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             mr: 1,
                             maxWidth: "0px",
                             maxHeight: "0px",
-                            opacity: "0%",
+                            display: "none"
                         }}
                     >
                     <InfoIcon 
@@ -396,7 +396,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             mr: 1,
                             maxWidth: "0px",
                             maxHeight: "0px",
-                            opacity: "0%",
+                            display: "none"
                         }}
                     >
                         <EditIcon 
@@ -421,7 +421,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             mr: 1,
                             maxWidth: "0px",
                             maxHeight: "0px",
-                            opacity: "0%",
+                            display: "none"
                         }}
                     >
                         <DeleteIcon 
@@ -473,7 +473,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         sortB = domainsB.at(0) as string;
                         break;
                     }
-                    console.debug(domainsB);
                     let domain = domainsB.pop() as string;
                     if (domain.length > 2) {
                         sortB = domain;
@@ -491,10 +490,10 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     }} justifyItems="left" alignItems="left" key={index}>
                         <Stack 
                             onMouseOver={function (e) {
-                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
+                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "inline-flex";})
                             }}
                             onMouseOut={function (e) {
-                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "0%";})
+                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "none";})
                             }}
                             direction="row" 
                             justifyItems="left" 
@@ -535,7 +534,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                     mr: 1,
                                     maxWidth: "0px",
                                     maxHeight: "0px",
-                                    opacity: "0%",
+                                    display: "none",
                                 }}
                             >
                                 <InfoIcon 
@@ -563,7 +562,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                     mr: 1,
                                     maxWidth: "0px",
                                     maxHeight: "0px",
-                                    opacity: "0%",
+                                    display: "none",
                                 }}
                             >
                                 <EditIcon 
@@ -591,7 +590,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                     mr: 1,
                                     maxWidth: "0px",
                                     maxHeight: "0px",
-                                    opacity: "0%",
+                                    display: "none",
                                 }}
                             >
                                 <DeleteIcon 

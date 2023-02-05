@@ -8,6 +8,7 @@
 - [x] Create appropriate \__DEBUG_LIST__ for debugging and README screenshots. Should showcase use cases.
 - [x] Add a debug indicator at the bottom of the App
 - [x] Inject __VERSION__ into App and manifest.json
+- [x] Changed entry dynamic buttons from opacity to display to allow for more width for link display when not hovering
 
 ## Major tasks
 - [x] Implement link editing and implement edit icon

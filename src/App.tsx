@@ -400,7 +400,6 @@ const App = () => {
     }
 
     useEffect(() => {
-        if (__IN_DEBUG__) console.debug(__DEBUG_LIST__);
         getConfigsFromStorage();
     }, []);
 
