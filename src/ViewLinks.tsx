@@ -58,6 +58,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const editLinkModalCancelButton: any = createRef();
     const editHostTagsField: any = createRef();
     const editHostModalAddButton: any = createRef();
+    const editHostModalDeleteButton: any = createRef();
     const editHostModalCancelButton: any = createRef();
     const searchField: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
@@ -573,7 +574,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                     }} 
                                 />
                             </IconButton>
-                            <IconButton size="small" 
+                            {/* <IconButton size="small" 
                                 onClick={() => {
                                     setHost(host);
                                     setHostDeleteDialogOpen(true);
@@ -600,8 +601,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                         opacity: "inherit",
                                     }} 
                                 />
-                            </IconButton>
-                            
+                            </IconButton> */}
                         </Stack>
                         <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
                         {host.links.map((link) => {
@@ -739,11 +739,25 @@ return (
                 display="flex"
                 flexDirection="column"
             >
-                <Typography
-                    variant="h6"
-                >
-                    Edit Host    
-                </Typography> 
+                <Stack flexDirection="row">
+                    <Typography
+                        variant="h6"
+                    >
+                        Edit Host    
+                    </Typography> 
+                    <Box flexGrow={1}/>
+                    <IconButton 
+                    // variant="contained" 
+                    // size="small" 
+                    ref={editHostModalDeleteButton} 
+                    color="error"
+                    onClick={() => {
+                        setEditHostModalOpen(false);
+                        setHostDeleteDialogOpen(true);
+                    }}>
+                        <DeleteIcon/>
+                    </IconButton>
+                </Stack>
                 <Box
                     display="flex"
                     flexDirection="row"

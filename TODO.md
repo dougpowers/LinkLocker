@@ -8,7 +8,7 @@
 - [x] Create appropriate \__DEBUG_LIST__ for debugging and README screenshots. Should showcase use cases.
 - [x] Add a debug indicator at the bottom of the App
 - [x] Inject __VERSION__ into App and manifest.json
-- [x] Changed entry dynamic buttons from opacity to display to allow for more width for link display when not hovering
+- [x] Change entry dynamic buttons from opacity to display to allow for more width for link display when not hovering
 
 ## Major tasks
 - [x] Implement link editing and implement edit icon
@@ -17,8 +17,8 @@
 - [x] Refactor LinkLockerLinkList into hosts and links to save on encrypted favicon data
 - [x] Add 'npm run ziptest' for .zip easy loading as an unsigned addon (add browser_specific_settings.gecko.id to ziptest)
 - [x] Add host-dependent tags to add as default entries for new links to that host
-- [ ] Add edit and delete options for host
-- [ ] Add confirmation dialog when deleting a whole host
+- [x] Add edit and delete options for host
+- [x] Add confirmation dialog when deleting a whole host
 - [x] Fix unicode bookmarks changing to ASCII
 - [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:'
 - [ ] Add sort options 
