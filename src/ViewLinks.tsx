@@ -14,7 +14,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
-import { LinkLockerLinkDir, LinkLockerLink, JsonReplacer, JsonReviver } from "./App";
+import { LinkLockerLinkDir, LinkLockerLink, LinkLockerLinkHost, JsonReplacer, JsonReviver } from "./App";
 import Fab from "@mui/material/Fab";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -50,26 +50,34 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const addLinkNameField: any = createRef();
     const addLinkTagsField: any = createRef();
     const addHostTagsField: any = createRef();
-    const addLinkDialogAddButton: any = createRef();
-    const addLinkDialogCancelButton: any = createRef();
+    const addLinkModalAddButton: any = createRef();
+    const addLinkModalCancelButton: any = createRef();
     const editLinkNameField: any = createRef();
     const editLinkTagsField: any = createRef();
-    const editLinkDialogAddButton: any = createRef();
-    const editLinkDialogCancelButton: any = createRef();
+    const editLinkModalAddButton: any = createRef();
+    const editLinkModalCancelButton: any = createRef();
+    const editHostTagsField: any = createRef();
+    const editHostModalAddButton: any = createRef();
+    const editHostModalCancelButton: any = createRef();
     const searchField: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
     const hamburgerOpen = Boolean(hamburgerAnchorEl);
-    const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
-    const popoverOpen = Boolean(popoverAnchorEl);
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [addLinkDialogOpen, setAddLinkDialogOpen] = useState(false);
-    const [editLinkDialogOpen, setEditLinkDialogOpen] = useState(false);
+    const [linkPopoverAnchorEl, setLinkPopoverAnchorEl] = useState<null | HTMLElement>(null);
+    const linkPopoverOpen = Boolean(linkPopoverAnchorEl);
+    const [hostPopoverAnchorEl, setHostPopoverAnchorEl] = useState<null | HTMLElement>(null);
+    const hostPopoverOpen = Boolean(hostPopoverAnchorEl);
+    const [acctDeleteDialogOpen, setAcctDeleteDialogOpen] = useState(false);
+    const [hostDeleteDialogOpen, setHostDeleteDialogOpen] = useState(false);
+    const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
+    const [editLinkModalOpen, setEditLinkModalOpen] = useState(false);
+    const [editHostModalOpen, setEditHostModalOpen] = useState(false);
     const [jsonDumpOpen, setJsonDumpOpen] = useState(false);
     const [linkGuid, setLinkGuid] = useState("");
     const [linkFaviconUrl, setLinkFaviconUrl] = useState("");
     const [linkUrl, setLinkUrl] = useState<null | URL>(null);
     const [linkName, setLinkName] = useState("");
     const [linkTags, setLinkTags] = useState("");
+    const [host, setHost] = useState<null | LinkLockerLinkHost>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [newHost, setNewHost] = useState(false);
 
@@ -131,6 +139,29 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         }
     }
 
+    const deleteHost = () => {
+        if (host != null) {
+            linkDir?.hosts.delete(host.hostname);
+        }
+    }
+
+    const editHost = (hostname: string, tags: Array<string>) => {
+        let host = linkDir?.hosts.get(hostname);
+
+        if (host) {
+            host.tags = tags;
+        }
+        if (linkDir) updateLinks(linkDir);
+    }
+
+    const openEditHostDialog = (hostname: string) => {
+        let host = linkDir?.hosts.get(hostname);
+        if (host) {
+            setHost(host)
+            setEditHostModalOpen(true);
+        }
+    }
+
     const setCurrentLink = (link: LinkLockerLink) => {
         let url = new URL(link.href);
         let favicon = linkDir?.hosts.get(url.hostname)?.favicon;
@@ -165,7 +196,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                 setLinkTags("");
             }
             setLinkName(trimTitle(tabs.at(0)!.title!, url));
-            setAddLinkDialogOpen(true);
+            setAddLinkModalOpen(true);
         }).catch((err) => {console.debug(err)});
     }    
 
@@ -179,7 +210,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         setLinkUrl(new URL(link.href));
         setLinkName(link.name);
         setLinkTags(link.tags.join(" "));
-        setEditLinkDialogOpen(true);
+        setEditLinkModalOpen(true);
     }
 
     const addLink = (href: URL, name: string, favicon: string, tags: Array<string>, newHostTags: Array<string>) => {
@@ -231,7 +262,11 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         setHamburgerAnchorEl(null);
     };
 
-    const handleDialogClose = () => {
+    const handleAcctDeleteDialogClose = () => {
+
+    }
+
+    const handleHostDeleteDialogClose = () => {
 
     }
 
@@ -316,10 +351,10 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     <IconButton size="small" 
                         onMouseEnter={(e) => {
                             setCurrentLink(link);
-                            setPopoverAnchorEl(e.currentTarget.parentElement);
+                            setLinkPopoverAnchorEl(e.currentTarget.parentElement);
                         }}
                         onMouseLeave={(e) => {
-                            setPopoverAnchorEl(null);
+                            setLinkPopoverAnchorEl(null);
                         }}
                         onFocus={(e) => {
                             e.currentTarget.style.opacity = "100%"
@@ -336,13 +371,13 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             opacity: "0%",
                         }}
                     >
-                        <InfoIcon 
-                            sx={{
-                                fontSize: 16, 
-                                color: "common.white",
-                                opacity: "inherit",
-                            }} 
-                        />
+                    <InfoIcon 
+                        sx={{
+                            fontSize: 16, 
+                            color: "common.white",
+                            opacity: "inherit",
+                        }} 
+                    />
                     </IconButton>
                     <IconButton size="small" 
                         onClick={(e) => {
@@ -401,407 +436,606 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
             );
         }
 
-        const renderGroupByHost = (linkDir: LinkLockerLinkDir, sort?: boolean) => {
-            let hosts = Array.from(linkDir.hosts.values());
-            if (sort) {
-                hosts.sort((a,b) => {
-                    let domainsA: Array<string> = a.hostname.split(".");
-                    let domainsB: Array<string> = b.hostname.split(".");
-                    
-                    if (domainsA && domainsA[0] == "") {
-                        return -1;
-                    } else if (domainsB && domainsB[0] == "") {
-                        return 1;
-                    }
-
-                    if (domainsA.length > 1) {
-                        domainsA.pop();
-                    }
-                    if (domainsB.length > 1) {
-                        domainsB.pop();
-                    }
-                    let sortA: string;
-                    let sortB: string;
-                    while (true) {
-                        if (domainsA.length == 1) {
-                            sortA = domainsA.at(0) as string;
-                            break;
-                        }
-                        let domain = domainsA.pop() as string;
-                        if (domain.length > 2) {
-                            sortA = domain;
-                            break;
-                        }
-                    }
-                    while (true) {
-                        if (domainsB.length == 1) {
-                            sortB = domainsB.at(0) as string;
-                            break;
-                        }
-                        console.debug(domainsB);
-                        let domain = domainsB.pop() as string;
-                        if (domain.length > 2) {
-                            sortB = domain;
-                            break;
-                        }
-                    }
-                    return sortA.localeCompare(sortB);
-                });
-            }
-            return (hosts.map((host, index) => {
-                    return (
-                        <Stack direction="column" sx={{
-                            p: 0.12,
-                            m: 0.12
-                        }} justifyItems="left" alignItems="left" key={index}>
-                            <Stack direction="row" justifyItems="left" sx={{m: 0.12, p: 0.12}} alignItems="center" key={host.hostname}>
-                                {
-                                    host.favicon ?
-                                    <img src={host.favicon} width="16px" height="16px" key={host.favicon}></img>
-                                    :
-                                    <LinkIcon sx={{
-                                        fontSize: 16,
-                                        color: "common.white"
-                                    }}/>
-                                }
-                                <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
-                                    {host.hostname}
-                                </Typography>
-                            </Stack>
-                            <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
-                            {host.links.map((link) => {
-                                return (
-                                    getLinkEntry(link, null)
-                                );
-                            })}
-                            </Stack>
-                        </Stack>
-                    );
+    const renderGroupByHost = (linkDir: LinkLockerLinkDir, sort?: boolean) => {
+        let hosts = Array.from(linkDir.hosts.values());
+        if (sort) {
+            hosts.sort((a,b) => {
+                let domainsA: Array<string> = a.hostname.split(".");
+                let domainsB: Array<string> = b.hostname.split(".");
+                
+                if (domainsA && domainsA[0] == "") {
+                    return -1;
+                } else if (domainsB && domainsB[0] == "") {
+                    return 1;
                 }
-            ));
-        }
 
-        const renderFlat = (linkDir: LinkLockerLinkDir) => {
-            let links: Array<LinkLockerLink> = new Array();
-            linkDir.hosts.forEach((v, k) => {
-                links = links.concat(v.links);
-            })
-
-            return (links.map((link, i) => {
-                let favicon = linkDir.hosts.get(new URL(link.href).hostname)?.favicon;
-                return (
-                    getLinkEntry(link, favicon)
-                );
-            }));
-        }
-
-        if(linkDir != null && linkDir.hosts.size > 0 && searchTerm == "") {
-            return renderGroupByHost(linkDir, true);
-        } else if (searchTerm != "" && linkDir) {
-            let hosts = Array.from(linkDir.hosts.values());
-            let links: Array<LinkLockerLink> = new Array();
-            hosts.forEach((v, i) => {
-                links = links.concat(v.links);
+                if (domainsA.length > 1) {
+                    domainsA.pop();
+                }
+                if (domainsB.length > 1) {
+                    domainsB.pop();
+                }
+                let sortA: string;
+                let sortB: string;
+                while (true) {
+                    if (domainsA.length == 1) {
+                        sortA = domainsA.at(0) as string;
+                        break;
+                    }
+                    let domain = domainsA.pop() as string;
+                    if (domain.length > 2) {
+                        sortA = domain;
+                        break;
+                    }
+                }
+                while (true) {
+                    if (domainsB.length == 1) {
+                        sortB = domainsB.at(0) as string;
+                        break;
+                    }
+                    console.debug(domainsB);
+                    let domain = domainsB.pop() as string;
+                    if (domain.length > 2) {
+                        sortB = domain;
+                        break;
+                    }
+                }
+                return sortA.localeCompare(sortB);
             });
-
-            const fuse = new Fuse(links, {
-                keys: [
-                    {name: "name", weight: 0.8}, 
-                    {name: "href", weight: 0.3}, 
-                    {name: "tags", weight: 1},
-                ],
-                useExtendedSearch: true,
-                threshold: 0.4,
-            });
-
-            const result = fuse.search(searchTerm);
-            if (result.length > 0) {
-                return renderFlat(
-                    dirFromList(result.map((v,i) => {return v.item;}) as LinkLockerLink[], linkDir)
-                );
-            } else {
+        }
+        return (hosts.map((host, index) => {
                 return (
-                    <Typography variant="body2">No results found.</Typography>
-                )
+                    <Stack direction="column" sx={{
+                        p: 0.12,
+                        m: 0.12
+                    }} justifyItems="left" alignItems="left" key={index}>
+                        <Stack 
+                            onMouseOver={function (e) {
+                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "100%";})
+                            }}
+                            onMouseOut={function (e) {
+                                (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.opacity = "0%";})
+                            }}
+                            direction="row" 
+                            justifyItems="left" 
+                            sx={{m: 0.12, p: 0.12}} 
+                            alignItems="center" 
+                            key={host.hostname}
+                        >
+                            {
+                                host.favicon ?
+                                <img src={host.favicon} width="16px" height="16px" key={host.favicon}></img>
+                                :
+                                <LinkIcon sx={{
+                                    fontSize: 16,
+                                    color: "common.white"
+                                }}/>
+                            }
+                            <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
+                                {host.hostname}
+                            </Typography>
+                            <Box flexGrow={1}/>
+                            <IconButton size="small" 
+                                onMouseEnter={(e) => {
+                                    setHost(host);
+                                    setHostPopoverAnchorEl(e.currentTarget.parentElement);
+                                }}
+                                onMouseLeave={(e) => {
+                                    setHostPopoverAnchorEl(null);
+                                }}
+                                onFocus={(e) => {
+                                    e.currentTarget.style.opacity = "100%"
+                                }}
+                                onBlur={(e) => {
+                                    e.currentTarget.style.opacity = "0%"
+                                }}
+                                sx={{
+                                    p: "1px",
+                                    ml: 1.5,
+                                    mr: 1,
+                                    maxWidth: "0px",
+                                    maxHeight: "0px",
+                                    opacity: "0%",
+                                }}
+                            >
+                                <InfoIcon 
+                                    sx={{
+                                        fontSize: 16, 
+                                        color: "common.white",
+                                        opacity: "inherit",
+                                    }} 
+                                />
+                            </IconButton>
+                            <IconButton size="small" 
+                                onClick={(e) => {
+                                    openEditHostDialog(host.hostname);
+                                    e.currentTarget.style.opacity = "0%"
+                                }}
+                                onFocus={(e) => {
+                                    e.currentTarget.style.opacity = "100%"
+                                }}
+                                onBlur={(e) => {
+                                    e.currentTarget.style.opacity = "0%"
+                                }}
+                                sx={{
+                                    p: "1px",
+                                    ml: 1,
+                                    mr: 1,
+                                    maxWidth: "0px",
+                                    maxHeight: "0px",
+                                    opacity: "0%",
+                                }}
+                            >
+                                <EditIcon 
+                                    sx={{
+                                        fontSize: 16, 
+                                        color: "success.dark",
+                                        opacity: "inherit",
+                                    }} 
+                                />
+                            </IconButton>
+                            <IconButton size="small" 
+                                onClick={() => {
+                                    setHost(host);
+                                    setHostDeleteDialogOpen(true);
+                                }}
+                                onFocus={(e) => {
+                                    e.currentTarget.style.opacity = "100%"
+                                }}
+                                onBlur={(e) => {
+                                    e.currentTarget.style.opacity = "0%"
+                                }}
+                                sx={{
+                                    p: "1px",
+                                    ml: 1,
+                                    mr: 1,
+                                    maxWidth: "0px",
+                                    maxHeight: "0px",
+                                    opacity: "0%",
+                                }}
+                            >
+                                <DeleteIcon 
+                                    sx={{
+                                        fontSize: 16, 
+                                        color: "error.dark",
+                                        opacity: "inherit",
+                                    }} 
+                                />
+                            </IconButton>
+                            
+                        </Stack>
+                        <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
+                        {host.links.map((link) => {
+                            return (
+                                getLinkEntry(link, null)
+                            );
+                        })}
+                        </Stack>
+                    </Stack>
+                );
             }
-        } else if ((linkDir == null || linkDir.hosts.size == 0)) {
-            return (
-                <Typography variant="body2">No links saved.</Typography>
-            )
-        }
+        ));
     }
 
-    useEffect(() => {
-        addLinkButton.current.focus();
-    }, [])
+    const renderFlat = (linkDir: LinkLockerLinkDir) => {
+        let links: Array<LinkLockerLink> = new Array();
+        linkDir.hosts.forEach((v, k) => {
+            links = links.concat(v.links);
+        })
 
-    return (
-        <Box 
-            minHeight="100%" 
-            boxSizing="border-box"
-            onKeyDown={(e) => {
-                if (e.key === "s" && document.activeElement?.tagName != "INPUT" && addLinkDialogOpen == false) {
-                    e.preventDefault();
-                    searchField.current.focus();
-                }
-            }}
-        >
-            { __IN_DEBUG__ ?
-                <Modal
-                    open={jsonDumpOpen}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            setJsonDumpOpen(false);
-                        }
+        return (links.map((link, i) => {
+            let favicon = linkDir.hosts.get(new URL(link.href).hostname)?.favicon;
+            return (
+                getLinkEntry(link, favicon)
+            );
+        }));
+    }
+
+    if(linkDir != null && linkDir.hosts.size > 0 && searchTerm == "") {
+        return renderGroupByHost(linkDir, true);
+    } else if (searchTerm != "" && linkDir) {
+        let hosts = Array.from(linkDir.hosts.values());
+        let links: Array<LinkLockerLink> = new Array();
+        hosts.forEach((v, i) => {
+            links = links.concat(v.links);
+        });
+
+        const fuse = new Fuse(links, {
+            keys: [
+                {name: "name", weight: 0.8}, 
+                {name: "href", weight: 0.3}, 
+                {name: "tags", weight: 1},
+            ],
+            useExtendedSearch: true,
+            threshold: 0.4,
+        });
+
+        const result = fuse.search(searchTerm);
+        if (result.length > 0) {
+            return renderFlat(
+                dirFromList(result.map((v,i) => {return v.item;}) as LinkLockerLink[], linkDir)
+            );
+        } else {
+            return (
+                <Typography variant="body2">No results found.</Typography>
+            )
+        }
+    } else if ((linkDir == null || linkDir.hosts.size == 0)) {
+        return (
+            <Typography variant="body2">No links saved.</Typography>
+        )
+    }
+}
+
+useEffect(() => {
+    addLinkButton.current.focus();
+}, [])
+
+return (
+    <Box 
+        minHeight="100%" 
+        boxSizing="border-box"
+        onKeyDown={(e) => {
+            if (e.key === "s" && document.activeElement?.tagName != "INPUT" && addLinkModalOpen == false) {
+                e.preventDefault();
+                searchField.current.focus();
+            }
+        }}
+    >
+        { __IN_DEBUG__ ?
+            <Modal
+                open={jsonDumpOpen}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                        setJsonDumpOpen(false);
+                    }
+                }}
+            >
+                <Box
+                    sx={{
+                        margin: "1rem",
+                        border: "1",
+                        borderRadius: "1",
+                        borderColor: "primary.main",
+                        backgroundColor: "rgba(0,0,0,255)"
                     }}
                 >
-                    <Box
+                    <TextField
+                        multiline
+                        onFocus={(e) => {e.currentTarget.select()}}
+                        defaultValue={
+                            JSON.stringify(linkDir, JsonReplacer)
+                        }
                         sx={{
-                            margin: "1rem",
-                            border: "1",
-                            borderRadius: "1",
-                            borderColor: "primary.main",
-                            backgroundColor: "rgba(0,0,0,255)"
+                            height: "100%",
+                            width: "100%"
                         }}
-                    >
-                        <TextField
-                            multiline
-                            onFocus={(e) => {e.currentTarget.select()}}
-                            defaultValue={
-                                JSON.stringify(linkDir, JsonReplacer)
-                            }
-                            sx={{
-                                height: "100%",
-                                width: "100%"
-                            }}
-                            size="small"
-                            maxRows={12}
-                        />
-                    </Box>
-                </Modal>
-                :
-                null
-            }
-            <Modal
-                open={addLinkDialogOpen}
-                disableAutoFocus={true}
-                sx={{
-                    margin: "auto",
-                    maxHeight: "fit-content",
-                }}
+                        size="small"
+                        maxRows={12}
+                    />
+                </Box>
+            </Modal>
+            :
+            null
+        }
+        <Modal
+            open={editHostModalOpen}
+            disableAutoFocus={true}
+            sx={{
+                margin: "auto",
+                maxHeight: "fit-content",
+            }}
+        >
+            <Box
+                maxWidth="80%"
+                marginTop="20px"
+                marginLeft="auto"
+                marginRight="auto"
+                maxHeight="fit-content"
+                bgcolor="background.paper"
+                padding="10px"
+                border={1}
+                borderRadius={1}
+                borderColor="primary.main"
+                display="flex"
+                flexDirection="column"
             >
-                <Box
-                    maxWidth="80%"
-                    marginTop="20px"
-                    marginLeft="auto"
-                    marginRight="auto"
-                    maxHeight="fit-content"
-                    bgcolor="background.paper"
-                    padding="10px"
-                    border={1}
-                    borderRadius={1}
-                    borderColor="primary.main"
-                    display="flex"
-                    flexDirection="column"
+                <Typography
+                    variant="h6"
                 >
+                    Edit Host    
+                </Typography> 
+                <Box
+                    display="flex"
+                    flexDirection="row"
+                    alignItems="center"
+                >
+                    <img src={host?.favicon} width="16px" height="16px" style={{marginRight: "5px"}}/>
                     <Typography
-                        variant="h6"
+                        variant="caption"
+                        marginTop="10px"
+                        marginBottom="10px"
                     >
-                        Add Link    
-                    </Typography> 
-                    <Box
-                        display="flex"
-                        flexDirection="row"
-                        alignItems="center"
-                    >
-                        <img src={linkFaviconUrl} width="16px" height="16px" style={{marginRight: "5px"}}/>
-                        <Typography
-                            variant="caption"
-                            marginTop="10px"
-                            marginBottom="10px"
-                        >
-                            {`${linkUrl?.hostname}${linkUrl?.pathname}`}
-                        </Typography>
-                    </Box>
-                    <TextField
-                        variant="standard"
-                        size="small"
-                        label="Name"
-                        inputRef={addLinkNameField}
-                        autoFocus={addLinkDialogOpen}
-                        defaultValue={linkName}
-                        onKeyDown={
-                            (e) => {
-                                if (e.key == "Enter") {
-                                    e.preventDefault();
-                                    addLinkDialogAddButton.current.click()
-                                }
+                        {host?.hostname}
+                    </Typography>
+                </Box>
+                <TextField
+                    variant="standard"
+                    size="small"
+                    label="Tags"
+                    inputRef={editHostTagsField}
+                    autoFocus={editHostModalOpen}
+                    defaultValue={host?.tags?.join(" ")}
+                    placeholder="Space-separated Tags"
+                    onFocus={(e) => {
+                        e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+                    }}
+                    onKeyDown={
+                        (e) => {
+                            if (e.key == "Enter") {
+                                e.preventDefault();
+                                editHostModalAddButton.current.click()
                             }
                         }
-                    >
-                    </TextField>
-                    <TextField
-                        variant="standard"
-                        size="small"
-                        label="Tags"
-                        inputRef={addLinkTagsField}
-                        placeholder="Space-separated Tags"
-                        defaultValue={linkTags}
-                        onFocus={(e) => {
-                            e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
-                        }}
-                        onKeyDown={
-                            (e) => {
-                                if (e.key == "Enter") {
-                                    e.preventDefault();
-                                    addLinkDialogAddButton.current.click()
-                                }
-                            }
-                        }
-                    >
-                    </TextField>
-                    {
-                        newHost ?
-                        <TextField
-                            variant="standard"
-                            size="small"
-                            label="Host Tags"
-                            onFocus={(e) => {
-                                e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
-                            }}
-                            inputRef={addHostTagsField}
-                            placeholder="Default tags for this host"
-                            onKeyDown={
-                                (e) => {
-                                    if (e.key == "Enter") {
-                                        e.preventDefault();
-                                        addLinkDialogAddButton.current.click()
-                                    }
-                                }
-                            }
-                        ></TextField>
-                        :
-                        null
                     }
-                    <Stack direction="row" spacing={2} marginTop="10px">
-                        <Button 
-                        variant="contained" 
-                        size="small" 
-                        ref={addLinkDialogAddButton} 
-                        onClick={() => {
-                            setAddLinkDialogOpen(false);
-                            if (newHost) {
-                                addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, Array.from(addLinkTagsField.current.value.split(" ")), Array.from(addHostTagsField.current.value.split(" ")));
-                            } else {
-                                addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, Array.from(addLinkTagsField.current.value.split(" ")), new Array());
-                            }
-                            setNewHost(false);
-                        }}>
-                            Add Link
-                        </Button>
-                        <Box flexGrow={1} />
-                        <Button variant="contained" size="small" ref={addLinkDialogCancelButton} onClick={() => {setAddLinkDialogOpen(false); setNewHost(false);}}>Cancel</Button>
-                    </Stack>
-                </Box>
-            </Modal>
-            <Modal
-                open={editLinkDialogOpen}
-                disableAutoFocus={true}
-                sx={{
-                    margin: "auto",
-                    maxHeight: "fit-content",
-                }}
-            >
-                <Box
-                    maxWidth="80%"
-                    marginTop="20px"
-                    marginLeft="auto"
-                    marginRight="auto"
-                    maxHeight="fit-content"
-                    bgcolor="background.paper"
-                    padding="10px"
-                    border={1}
-                    borderRadius={1}
-                    borderColor="primary.main"
-                    display="flex"
-                    flexDirection="column"
                 >
+                </TextField>
+                <Stack direction="row" spacing={2} marginTop="10px">
+                    <Button 
+                    variant="contained" 
+                    size="small" 
+                    ref={editHostModalAddButton} 
+                    onClick={() => {
+                        setEditHostModalOpen(false);
+                        editHost(host!.hostname, editHostTagsField.current.value.split(" "));
+                    }}>
+                        Save Host
+                    </Button>
+                    <Box flexGrow={1} />
+                    <Button variant="contained" size="small" ref={editHostModalCancelButton} onClick={() => {setEditHostModalOpen(false)}}>Cancel</Button>
+                </Stack>
+            </Box>
+        </Modal>
+        <Modal
+            open={addLinkModalOpen}
+            disableAutoFocus={true}
+            sx={{
+                margin: "auto",
+                maxHeight: "fit-content",
+            }}
+        >
+            <Box
+                maxWidth="80%"
+                marginTop="20px"
+                marginLeft="auto"
+                marginRight="auto"
+                maxHeight="fit-content"
+                bgcolor="background.paper"
+                padding="10px"
+                border={1}
+                borderRadius={1}
+                borderColor="primary.main"
+                display="flex"
+                flexDirection="column"
+            >
+                <Typography
+                    variant="h6"
+                >
+                    Add Link    
+                </Typography> 
+                <Box
+                    display="flex"
+                    flexDirection="row"
+                    alignItems="center"
+                >
+                    <img src={linkFaviconUrl} width="16px" height="16px" style={{marginRight: "5px"}}/>
                     <Typography
-                        variant="h6"
+                        variant="caption"
+                        marginTop="10px"
+                        marginBottom="10px"
                     >
-                        Edit Link    
-                    </Typography> 
-                    <Box
-                        display="flex"
-                        flexDirection="row"
-                        alignItems="center"
-                    >
-                        <img src={linkFaviconUrl} width="16px" height="16px" style={{marginRight: "5px"}}/>
-                        <Typography
-                            variant="caption"
-                            marginTop="10px"
-                            marginBottom="10px"
-                        >
-                            {`${linkUrl?.hostname}${linkUrl?.pathname}`}
-                        </Typography>
-                    </Box>
-                    <TextField
-                        variant="standard"
-                        size="small"
-                        label="Name"
-                        inputRef={editLinkNameField}
-                        autoFocus={editLinkDialogOpen}
-                        defaultValue={linkName}
-                        onKeyDown={
-                            (e) => {
-                                if (e.key == "Enter") {
-                                    e.preventDefault();
-                                    editLinkDialogAddButton.current.click()
-                                }
+                        {`${linkUrl?.hostname}${linkUrl?.pathname}`}
+                    </Typography>
+                </Box>
+                <TextField
+                    variant="standard"
+                    size="small"
+                    label="Name"
+                    inputRef={addLinkNameField}
+                    autoFocus={addLinkModalOpen}
+                    defaultValue={linkName}
+                    onKeyDown={
+                        (e) => {
+                            if (e.key == "Enter") {
+                                e.preventDefault();
+                                addLinkModalAddButton.current.click()
                             }
                         }
-                    >
-                    </TextField>
+                    }
+                >
+                </TextField>
+                <TextField
+                    variant="standard"
+                    size="small"
+                    label="Tags"
+                    inputRef={addLinkTagsField}
+                    placeholder="Space-separated Tags"
+                    defaultValue={linkTags}
+                    onFocus={(e) => {
+                        e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+                    }}
+                    onKeyDown={
+                        (e) => {
+                            if (e.key == "Enter") {
+                                e.preventDefault();
+                                addLinkModalAddButton.current.click()
+                            }
+                        }
+                    }
+                >
+                </TextField>
+                {
+                    newHost ?
                     <TextField
                         variant="standard"
                         size="small"
-                        label="Tags"
-                        inputRef={editLinkTagsField}
-                        defaultValue={linkTags}
-                        placeholder="Space-separated Tags"
+                        label="Host Tags"
                         onFocus={(e) => {
                             e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
                         }}
+                        inputRef={addHostTagsField}
+                        placeholder="Default tags for this host"
                         onKeyDown={
                             (e) => {
                                 if (e.key == "Enter") {
                                     e.preventDefault();
-                                    editLinkDialogAddButton.current.click()
+                                    addLinkModalAddButton.current.click()
                                 }
                             }
                         }
+                    ></TextField>
+                    :
+                    null
+                }
+                <Stack direction="row" spacing={2} marginTop="10px">
+                    <Button 
+                    variant="contained" 
+                    size="small" 
+                    ref={addLinkModalAddButton} 
+                    onClick={() => {
+                        setAddLinkModalOpen(false);
+                        if (newHost) {
+                            addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, Array.from(addLinkTagsField.current.value.split(" ")), Array.from(addHostTagsField.current.value.split(" ")));
+                        } else {
+                            addLink(linkUrl as URL, addLinkNameField.current.value, linkFaviconUrl, Array.from(addLinkTagsField.current.value.split(" ")), new Array());
+                        }
+                        setNewHost(false);
+                    }}>
+                        Add Link
+                    </Button>
+                    <Box flexGrow={1} />
+                    <Button variant="contained" size="small" ref={addLinkModalCancelButton} onClick={() => {setAddLinkModalOpen(false); setNewHost(false);}}>Cancel</Button>
+                </Stack>
+            </Box>
+        </Modal>
+        <Modal
+            open={editLinkModalOpen}
+            disableAutoFocus={true}
+            sx={{
+                margin: "auto",
+                maxHeight: "fit-content",
+            }}
+        >
+            <Box
+                maxWidth="80%"
+                marginTop="20px"
+                marginLeft="auto"
+                marginRight="auto"
+                maxHeight="fit-content"
+                bgcolor="background.paper"
+                padding="10px"
+                border={1}
+                borderRadius={1}
+                borderColor="primary.main"
+                display="flex"
+                flexDirection="column"
+            >
+                <Typography
+                    variant="h6"
+                >
+                    Edit Link    
+                </Typography> 
+                <Box
+                    display="flex"
+                    flexDirection="row"
+                    alignItems="center"
+                >
+                    <img src={linkFaviconUrl} width="16px" height="16px" style={{marginRight: "5px"}}/>
+                    <Typography
+                        variant="caption"
+                        marginTop="10px"
+                        marginBottom="10px"
                     >
-                    </TextField>
-                    <Stack direction="row" spacing={2} marginTop="10px">
-                        <Button 
-                        variant="contained" 
-                        size="small" 
-                        ref={editLinkDialogAddButton} 
-                        onClick={() => {
-                            setEditLinkDialogOpen(false);
-                            editLink(linkGuid, linkUrl as URL, editLinkNameField.current.value, linkFaviconUrl, editLinkTagsField.current.value.split(" "));
-                        }}>
-                            Save Link
-                        </Button>
-                        <Box flexGrow={1} />
-                        <Button variant="contained" size="small" ref={editLinkDialogCancelButton} onClick={() => {setEditLinkDialogOpen(false)}}>Cancel</Button>
-                    </Stack>
+                        {`${linkUrl?.hostname}${linkUrl?.pathname}`}
+                    </Typography>
                 </Box>
-            </Modal>
+                <TextField
+                    variant="standard"
+                    size="small"
+                    label="Name"
+                    inputRef={editLinkNameField}
+                    autoFocus={editLinkModalOpen}
+                    defaultValue={linkName}
+                    onKeyDown={
+                        (e) => {
+                            if (e.key == "Enter") {
+                                e.preventDefault();
+                                editLinkModalAddButton.current.click()
+                            }
+                        }
+                    }
+                >
+                </TextField>
+                <TextField
+                    variant="standard"
+                    size="small"
+                    label="Tags"
+                    inputRef={editLinkTagsField}
+                    defaultValue={linkTags}
+                    placeholder="Space-separated Tags"
+                    onFocus={(e) => {
+                        e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length);
+                    }}
+                    onKeyDown={
+                        (e) => {
+                            if (e.key == "Enter") {
+                                e.preventDefault();
+                                editLinkModalAddButton.current.click()
+                            }
+                        }
+                    }
+                >
+                </TextField>
+                <Stack direction="row" spacing={2} marginTop="10px">
+                    <Button 
+                    variant="contained" 
+                    size="small" 
+                    ref={editLinkModalAddButton} 
+                    onClick={() => {
+                        setEditLinkModalOpen(false);
+                        editLink(linkGuid, linkUrl as URL, editLinkNameField.current.value, linkFaviconUrl, editLinkTagsField.current.value.split(" "));
+                    }}>
+                        Save Link
+                    </Button>
+                    <Box flexGrow={1} />
+                    <Button variant="contained" size="small" ref={editLinkModalCancelButton} onClick={() => {setEditLinkModalOpen(false)}}>Cancel</Button>
+                </Stack>
+            </Box>
+        </Modal>
+        <Popover
+            id="host-popover"
+            anchorEl={hostPopoverAnchorEl}
+            open={hostPopoverOpen}
+            anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "left"
+            }}
+            transformOrigin={{
+                vertical: "top",
+                horizontal: "left"
+            }}
+            sx={{pointerEvents: "none"}}
+            onClose={() => {setHostPopoverAnchorEl(null);}}
+            disableRestoreFocus
+        >
+                <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
+                    tags: {host?.tags?.join(" ")}
+                </Typography>
+            </Popover>
             <Popover
                 id="entry-popover"
-                anchorEl={popoverAnchorEl}
-                open={popoverOpen}
+                anchorEl={linkPopoverAnchorEl}
+                open={linkPopoverOpen}
                 anchorOrigin={{
                     vertical: "bottom",
                     horizontal: "left"
@@ -811,7 +1045,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     horizontal: "left"
                 }}
                 sx={{pointerEvents: "none"}}
-                onClose={() => {setPopoverAnchorEl(null);}}
+                onClose={() => {setLinkPopoverAnchorEl(null);}}
                 disableRestoreFocus
             >
                 <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
@@ -931,7 +1165,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         <MenuItem  
                             key="delete" 
                             divider 
-                            onClick={() => {setDialogOpen(true)}} 
+                            onClick={() => {setAcctDeleteDialogOpen(true)}} 
                             sx={{
                                 color: "error.main",
                             }}
@@ -942,8 +1176,8 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     </Menu>
                 </Stack>
                 <Dialog 
-                    open={dialogOpen}
-                    onClose={handleDialogClose}
+                    open={acctDeleteDialogOpen}
+                    onClose={handleAcctDeleteDialogClose}
                     >
                     <DialogTitle>{"Delete Account?"}</DialogTitle>
                     <DialogContent sx={{
@@ -952,8 +1186,21 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         <DialogContentText>Are you sure you want to delete this account?</DialogContentText>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={(e) => {setDialogOpen(false)}} autoFocus>Go Back</Button>
-                        <Button onClick={(e) => {setDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
+                        <Button onClick={(e) => {setAcctDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
+                        <Button onClick={(e) => {setAcctDeleteDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
+                    </DialogActions>
+                </Dialog>
+                <Dialog 
+                    open={hostDeleteDialogOpen}
+                    onClose={handleHostDeleteDialogClose}
+                    >
+                    <DialogTitle>{"Delete All Host Links?"}</DialogTitle>
+                    <DialogContent sx={{overflow: "hidden"}}>
+                        <DialogContentText fontSize="1rem">Are you sure you want to delete {host?.links.length} link{(host != undefined && host.links.length) > 1 ? "s" : null} from this host?</DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
+                        <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false); deleteHost()}} sx={{color: 'error.main'}}>DELETE</Button>
                     </DialogActions>
                 </Dialog>
             </Stack>
