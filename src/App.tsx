@@ -89,8 +89,9 @@ export interface LinkLockerLink {
     tags: Array<string>;
 }
 
-export type LinkLockerLinkDir = {
-    hosts: Map<string, LinkLockerLinkHost>;
+export interface LinkLockerLinkDir {
+    hosts: Map<string, LinkLockerLinkHost>,
+    listCache?: LinkLockerLink[]
 } 
 
 export type LinkLockerLinkHost = {
@@ -123,6 +124,17 @@ export const darkTheme = createTheme({
         mode: constants.PALETTE_MODE,
     },
 });
+
+export const buildDirCache = (dir: LinkLockerLinkDir) => {
+    for (let v of dir.hosts.values()) {
+        if (dir.listCache) {
+            dir.listCache = dir.listCache.concat(v.links);
+        } else {
+            dir.listCache = new Array();
+        }
+    }
+
+}
 
 //Returns a random string of characters [A-Za-z0-9] of specified length
 const makeSalt = (length: number): string => {

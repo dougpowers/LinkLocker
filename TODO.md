@@ -9,6 +9,7 @@
 - [x] Add a debug indicator at the bottom of the App
 - [x] Inject __VERSION__ into App and manifest.json
 - [x] Change entry dynamic buttons from opacity to display to allow for more width for link display when not hovering
+- [x] Add json download option
 
 ## Major tasks
 - [x] Implement link editing and implement edit icon
@@ -21,6 +22,7 @@
 - [x] Add confirmation dialog when deleting a whole host
 - [x] Fix unicode bookmarks changing to ASCII
 - [x] Change popup window.localStorage to background script window.sessionStorage to make all sessions ephemeral
+- [ ] Change LinkLockerLink.href from string to URL
 - [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:'
 - [ ] Add sort options 
 - [ ] Add ability to change account password

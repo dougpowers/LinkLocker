@@ -875,6 +875,7 @@ return (
                 >
                     {__IN_DEBUG__ ? 
                             <MenuItem
+                                dense
                                 key="dump_json"
                                 onClick={() => {
                                     handleHamburgerClose();
@@ -889,6 +890,7 @@ return (
                     }
                     {__IN_DEBUG__ ? 
                             <MenuItem
+                                dense
                                 key="add_debug_links"
                                 divider
                                 onClick={() => {
@@ -905,6 +907,7 @@ return (
                     }
                     <MenuItem  
                         key="delete" 
+                        dense
                         divider 
                         onClick={() => {setAcctDeleteDialogOpen(true)}} 
                         sx={{
@@ -913,7 +916,25 @@ return (
                     >
                         Delete Account...
                     </MenuItem>
-                    <MenuItem key="logout" onClick={logout} selected>Logout</MenuItem>
+                    <MenuItem dense key="download_backup" onClick={() => {
+                        let link = document.createElement("a");
+                        let date = new Date()
+                        link.download = 
+                            `ll-backup-`+
+                            `${date.getFullYear()}`+
+                            `${date.getMonth().toString().padStart(2, '0')}`+
+                            `${date.getDate().toString().padStart(2, '0')}`+
+                            `${date.getHours().toString().padStart(2, '0')}`+
+                            `${date.getMinutes().toString().padStart(2, '0')}.json`
+                        link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer, 4)}`
+                        link.style.display = "none";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.setTimeout(() => {window.close()}, 100);
+                    }}
+                    >Download Backup...</MenuItem>
+                    <MenuItem dense key="logout" onClick={logout} selected>Logout</MenuItem>
                 </Menu>
             </Stack>
         </Stack>
