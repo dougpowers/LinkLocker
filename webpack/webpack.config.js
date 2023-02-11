@@ -87,9 +87,10 @@ switch (process.env.NODE_ENV) {
         module.exports = {
             mode: "development",
             devtool: "source-map",
-            entry: [
-                path.resolve(__dirname, "..", "src", "index.tsx"),
-            ],
+            entry: {
+                main: path.resolve(__dirname, "..", "src", "index.tsx"),
+                background: path.resolve(__dirname, "..", "src", "background.ts")
+            },
             output: {
                 sourceMapFilename: "./[name].js.map",
                 pathinfo: true,

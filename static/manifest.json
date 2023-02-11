@@ -4,8 +4,13 @@
    "manifest_version": 2,
    "permissions": [
       "activeTab",
-      "storage"
+      "storage",
+      "alarms"
    ],
+   "background": {
+      "scripts": ["background.js"],
+      "persistent": false
+   },
    "icons": {
       "256": "icons/LLLogo256.png",
       "512": "icons/LLLogo512.png"

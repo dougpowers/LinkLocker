@@ -71,6 +71,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const editHostModalCancelButton: any = createRef();
     const linkDisplayBox: any = createRef();
     const searchField: any = createRef();
+    const sortSelect: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
     const hamburgerOpen = Boolean(hamburgerAnchorEl);
     const [linkPopoverAnchorEl, setLinkPopoverAnchorEl] = useState<null | HTMLElement>(null);
@@ -491,10 +492,10 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                         setHostPopoverAnchorEl(null);
                                     }}
                                     onFocus={(e) => {
-                                        e.currentTarget.style.opacity = "100%"
+                                        e.currentTarget.style.display = "inline-flex"
                                     }}
                                     onBlur={(e) => {
-                                        e.currentTarget.style.opacity = "0%"
+                                        e.currentTarget.style.display = "none"
                                     }}
                                     sx={{
                                         p: "1px",
@@ -781,24 +782,30 @@ return (
                     size="small"
                     label="Search Links"
                     inputRef={searchField}
+                    fullWidth
                     InputProps={{
                         endAdornment: <InputAdornment position="end">
                             <SearchIcon fontSize="small" />
                             </InputAdornment>,
                     }}
                     sx={{marginBottom: "4px"}}
+                    onFocus={(e) => {sortSelect.current.value = ""}}
+                    onBlur={(e) => {sortSelect.current.value = sortMode}}
                     onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); searchField.current.select()}}}
                 />
                 <FormControl sx={{ml: 0.5, width: "8.5rem"}}>
                     <InputLabel id="sort-select-label">Sort</InputLabel>
                     <Select
+                        // ref={sortSelect}
+                        inputRef={sortSelect}
                         size="small"
                         labelId="sort-select-label"
                         id="sort-select"
                         value={sortMode}
                         label="Sort"
-                        onChange={(e) => {setSortMode(e.target.value as SortMode); linkDisplayBox.scrollTo(0,0)}}
+                        onChange={(e) => {setSortMode(e.target.value as SortMode); linkDisplayBox.current.scrollTo(0,0);}}
                     >
+                        <MenuItem dense hidden value=""> </MenuItem>
                         <MenuItem dense value={SortMode.AlphabeticalByHost}>Host A-Z</MenuItem>
                         <MenuItem dense value={SortMode.AlphabeticalByHostReverse}>Host Z-A</MenuItem>
                         <MenuItem dense value={SortMode.TimestampNewest}>Newest</MenuItem>
@@ -817,7 +824,7 @@ return (
                     maxWidth: "100%",
                     maxHeight: constants.SCROLLER_MAX_HEIGHT,
                 }}
-                itemRef={linkDisplayBox}
+                ref={linkDisplayBox}
             >
                 {buildListSorted()}
             </Box>

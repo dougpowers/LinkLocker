@@ -20,10 +20,10 @@
 - [x] Add edit and delete options for host
 - [x] Add confirmation dialog when deleting a whole host
 - [x] Fix unicode bookmarks changing to ASCII
+- [x] Change popup window.localStorage to background script window.sessionStorage to make all sessions ephemeral
 - [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:'
 - [ ] Add sort options 
 - [ ] Add ability to change account password
 - [ ] Add JSON text entry for bookmark import
-- [ ] Add timeout for non-icognito sessions (this is not a secure method as credentials will persist in storage until LinkLocker is opened after the timeout)
 - [ ] Add omnibox functionality
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)

@@ -316,8 +316,10 @@ const App = () => {
                         guid: guid,
                         cipherHash: res.encoded,
                         linkList: linkList
-                    }
-                    window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount, JsonReplacer));
+                    };
+                    let sessionConfig = JSON.stringify(newActiveAccount, JsonReplacer);
+                    browser.runtime.sendMessage({command: "set_active_account", string: sessionConfig});
+                    // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount, JsonReplacer));
                     activeAccountDispatch({type: "login", payload: {guid: newActiveAccount.guid, cipherHash: newActiveAccount.cipherHash, linkList: newActiveAccount.linkList}})
                 });
                 setIsLoading(false);
@@ -331,7 +333,8 @@ const App = () => {
 
     const logout = () => {
         //Delete the active session
-        window.localStorage.removeItem("sessionConfig");
+        // window.localStorage.removeItem("sessionConfig");
+        browser.runtime.sendMessage(null, {command: "logout"})
         activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkList: null}})
     }
 
@@ -349,7 +352,8 @@ const App = () => {
     const updateLinks = (linkDir: LinkLockerLinkDir) => {
         let acct = getAcct(activeAccount!.guid);
         let newActiveAccountObject: LinkLockerActiveAccount = {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: linkDir};
-        window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject, JsonReplacer));
+        // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject, JsonReplacer));
+        browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify(newActiveAccountObject, JsonReplacer)});
         let encrypted = CryptoJS.AES.encrypt(JSON.stringify(linkDir, JsonReplacer), newActiveAccountObject.cipherHash);
         //Create serializable LinkLockerBasicCipherParams from the fresh CryptoJS CipherParams
         acct.cipher = {
@@ -365,7 +369,6 @@ const App = () => {
     async function getConfigsFromStorage() {
         let {config: storedConfigString} = await browser.storage.local.get("config");
 
-
         if (storedConfigString) {
             //Try to load config from "config" key
             let loadedConfig: LinkLockerConfig;
@@ -373,19 +376,26 @@ const App = () => {
             configDispatch({type: "newConfig", payload: {newConfig: loadedConfig}})
 
             //Try to load session data
-            let sessionConfigString = window.localStorage.getItem('sessionConfig');
-            if (sessionConfigString) {
-                //Parse session into activeAccount, dispatch, and do nothing else
-                let activeAccount = JSON.parse(sessionConfigString, JsonReviver) as LinkLockerActiveAccount;
-                activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: activeAccount.linkList}})
-                return;
-            } else if (loadedConfig.accounts.length > 0) {
-                // setIsLoading(false);
-                return;
-            } else {
-                // setIsLoading(false);
-                return;
-            }
+            // let sessionConfigString = window.localStorage.getItem('sessionConfig');
+            browser.runtime.sendMessage(null, {command: "get_active_account"}).then((payload) => {
+                if (payload && payload.string) {
+                    let activeAccount = JSON.parse(payload.string, JsonReviver) as LinkLockerActiveAccount;
+                    activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: activeAccount.linkList}})
+                }
+            });
+
+            // if (sessionConfigString) {
+            //     //Parse session into activeAccount, dispatch, and do nothing else
+            //     // let activeAccount = JSON.parse(sessionConfigString, JsonReviver) as LinkLockerActiveAccount;
+            //     // activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: activeAccount.linkList}})
+            //     // return;
+            // } else if (loadedConfig.accounts.length > 0) {
+            //     // setIsLoading(false);
+            //     return;
+            // } else {
+            //     // setIsLoading(false);
+            //     return;
+            // }
         } else {
             //First time running the extension
             //Generate new config with empty accounts array and unset the flag to dismiss the non-incognito warning modal
