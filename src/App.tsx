@@ -45,9 +45,6 @@ type ConfigReducerAction =
             guid: string;
         }
     }
-    | {
-        type: "dismissIncognitoWarning";
-    }
 
 type ActiveAccountReducerAction = 
     | {
@@ -62,7 +59,6 @@ type ActiveAccountReducerAction =
     }
 
 interface LinkLockerConfig {
-    incognitoWarningDismissed: boolean,
     accounts: Array<LinkLockerAcct>,
 }
 
@@ -87,6 +83,7 @@ export interface LinkLockerLink {
     name: string;
     timestamp: number;
     tags: Array<string>;
+    url: URL;
 }
 
 export interface LinkLockerLinkDir {
@@ -196,7 +193,6 @@ const App = () => {
 
     //State reducer for the primary configuration. config is stored in extension local storage on every change
     // activeAccount.linkList is reencrypted and stored in config.accounts[/guid/].cipher every update. 
-    // Those values are not backpropagated, so this may cause incognito and non-incognito instances of LinkLocker to desync with undefined behavior
     const configReducer = (config: LinkLockerConfig, action: ConfigReducerAction): LinkLockerConfig => {
         let updatedAcctList = Array.from(config.accounts);
         switch (action.type) {
@@ -214,9 +210,6 @@ const App = () => {
                 }) 
                 browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
                 return {...config, accounts: updatedAcctList};
-            case "dismissIncognitoWarning":
-                browser.storage.local.set({ 'config': JSON.stringify({...config, incognitoWarningDismissed: true}, JsonReplacer) });
-                return {...config, incognitoWarningDismissed: true};
             case "removeAcct":
                 updatedAcctList.splice(updatedAcctList.findIndex((a: LinkLockerAcct) => {if (a.guid == action.payload.guid) return}), 1);
                 browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
@@ -226,13 +219,12 @@ const App = () => {
 
     //Set warning as dismissed so modal doesn't get rendered before config load. Value is set to false 
     // in empty config in getConfigsFromStorage function should the storedConfig actually be empty.
-    const [config, configDispatch] = useReducer(configReducer, {incognitoWarningDismissed: true, accounts: new Array()}); 
+    const [config, configDispatch] = useReducer(configReducer, {accounts: new Array()}); 
     const [renderedComponent, updateRenderedComponent] = useState(RenderedComponent.Loading);
     const [activeAccount, activeAccountDispatch] = useReducer(activeAccountReducer, {guid: "", cipherHash: "", links: null});
     //Global state that the last login failed. Used by Login component to put the passwordInput into fail style.
     const [failedLogin, updateFailedLogin] = useState(false);
     const [addingNewAcct, updateAddingNewAcct] = useState(false);
-    const [incognitoModalOpen, setIncognitoModalOpen] = useState(false);
 
     //Interface and ref for CreateAcct that allows the app to focus the password field once the modal has been dismissed
     interface AcctCreateHandles {
@@ -410,9 +402,8 @@ const App = () => {
             // }
         } else {
             //First time running the extension
-            //Generate new config with empty accounts array and unset the flag to dismiss the non-incognito warning modal
+            //Generate new config with empty accounts array
             let newConfig: LinkLockerConfig = {
-                incognitoWarningDismissed: false,
                 accounts: new Array(),
             };
             configDispatch({type: "newConfig", payload: {newConfig: newConfig}})
@@ -427,14 +418,8 @@ const App = () => {
 
     //Set renderedComponent based on current state
     useEffect(() => {
-        //Show incognito warning modal if the flag hasn't been set
-        if (!browser.extension.inIncognitoContext && !config.incognitoWarningDismissed) {
-            setIncognitoModalOpen(true);
-        } else {
-            setIncognitoModalOpen(false);
-            if (renderedComponent == RenderedComponent.AcctCreate) {
-                acctCreateRef.current?.focusUsernameField()
-            }
+        if (renderedComponent == RenderedComponent.AcctCreate) {
+            acctCreateRef.current?.focusUsernameField()
         }
         //No config loaded -> Loading
         if (!config || isLoading) {
@@ -476,43 +461,6 @@ const App = () => {
         <>
             <ThemeProvider theme={darkTheme}>
                 <CssBaseline />
-                <Modal 
-                    open={incognitoModalOpen}
-                    onClose={(e, r) => {
-                        configDispatch({type: "dismissIncognitoWarning"});
-                        setIncognitoModalOpen(false);     
-                    }}
-                    disableAutoFocus={false}
-                    sx={{
-                        margin: 'auto', 
-                        display: 'flex', 
-                        justifyContent: 'center', 
-                        alignItems: 'center',
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key == " " || e.key === "Enter") {
-                            e.preventDefault();
-                            configDispatch({type: "dismissIncognitoWarning"});
-                            setIncognitoModalOpen(false);
-                        }
-                    }}
-                >
-                    <Box maxWidth="80%" maxHeight="fit-content" sx={{
-                        padding: "10px",
-                        bgcolor: 'background.paper',
-                        border: '2px solid',
-                        borderColor: 'error.main',
-                        borderRadius: 1
-                        }}>
-                        <Typography variant="caption" paragraph={true} sx={{ 
-                            lineHeight: "1rem", 
-                            cursor: "default",
-                            mb: "0px",    
-                        }}>
-                            WARNING: <br />LinkLocker is intended to be used in incognito mode. When used in non-incognito mode, LinkLocker sessions may persist through browser shutdown. If you use LinkLocker in non-incognito mode, be sure to log out of your session before closing your browser to maintain privacy. Adding links in both modes simultaneously is not recommended and may result in lost entries.
-                        </Typography>
-                    </Box>
-                </Modal>
                 <Box 
                     paddingTop="0.8rem" 
                     paddingLeft="0.8rem"
@@ -529,16 +477,6 @@ const App = () => {
                         <Typography variant="h5">
                             LinkLocker
                         </Typography>
-                        {
-                            browser.extension.inIncognitoContext ?
-                            null
-                            :
-                            <Typography
-                                variant="caption" 
-                                color="error.main"
-                                mt="0px"
-                            >Browser is not in icognito mode</Typography>
-                        }
                         {/* Conditionally render the three different components and a loading indicator */}
                         {
                             renderedComponent == RenderedComponent.Loading || renderedComponent == null ? 

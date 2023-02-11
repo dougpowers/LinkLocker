@@ -227,19 +227,20 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         setEditLinkModalOpen(true);
     }
 
-    const addLink = (href: URL, name: string, favicon: string, tags: Array<string>, newHostTags: Array<string>) => {
+    const addLink = (url: URL, name: string, favicon: string, tags: Array<string>, newHostTags: Array<string>) => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
             if (tabs.at(0) != undefined && tabs.at(0)!.url) {
                 tags = tags.concat(newHostTags);
-                let link = {
+                let link: LinkLockerLink = {
                     guid: uuidv4(),
-                    href: href.toString(),
+                    href: url.toString(),
                     name: name,
                     timestamp: Date.now(),
                     tags: tags,
+                    url: url
                 }
                 
-                let url = new URL(link.href);
+                // let url = new URL(link.href);
 
                 if (linkDir == null) {
                     linkDir = {hosts: new Map()};
@@ -370,12 +371,12 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         onMouseLeave={(e) => {
                             setLinkPopoverAnchorEl(null);
                         }}
-                        onFocus={(e) => {
-                            e.currentTarget.style.opacity = "100%"
-                        }}
-                        onBlur={(e) => {
-                            e.currentTarget.style.opacity = "0%"
-                        }}
+                        // onFocus={(e) => {
+                        //     e.currentTarget.style.opacity = "100%"
+                        // }}
+                        // onBlur={(e) => {
+                        //     e.currentTarget.style.opacity = "0%"
+                        // }}
                         sx={{
                             p: "1px",
                             ml: 1.5,
@@ -396,13 +397,13 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     <IconButton size="small" 
                         onClick={(e) => {
                             openEditLinkDialog(link);
-                            e.currentTarget.style.opacity = "0%"
+                            // e.currentTarget.style.opacity = "0%"
                         }}
                         onFocus={(e) => {
                             e.currentTarget.style.opacity = "100%"
                         }}
                         onBlur={(e) => {
-                            e.currentTarget.style.opacity = "0%"
+                            // e.currentTarget.style.opacity = "0%"
                         }}
                         sx={{
                             p: "1px",
@@ -427,7 +428,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             e.currentTarget.style.opacity = "100%"
                         }}
                         onBlur={(e) => {
-                            e.currentTarget.style.opacity = "0%"
+                            // e.currentTarget.style.opacity = "0%"
                         }}
                         sx={{
                             p: "1px",
@@ -517,13 +518,13 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                 <IconButton size="small" 
                                     onClick={(e) => {
                                         openEditHostDialog(host.hostname);
-                                        e.currentTarget.style.opacity = "0%"
+                                        // e.currentTarget.style.opacity = "0%"
                                     }}
                                     onFocus={(e) => {
                                         e.currentTarget.style.opacity = "100%"
                                     }}
                                     onBlur={(e) => {
-                                        e.currentTarget.style.opacity = "0%"
+                                        // e.currentTarget.style.opacity = "0%"
                                     }}
                                     sx={{
                                         p: "1px",
