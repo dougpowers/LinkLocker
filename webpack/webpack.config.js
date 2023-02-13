@@ -27,9 +27,10 @@ switch (process.env.NODE_ENV) {
     case 'production':
         module.exports = {
             mode: "production",
-            entry: [
-                path.resolve(__dirname, "..", "src", "index.tsx"),
-            ],
+            entry: {
+                main: path.resolve(__dirname, "..", "src", "index.tsx"),
+                background: path.resolve(__dirname, "..", "src", "background.ts")
+            },
             output: {
                 path: path.join(__dirname, "../dist"),
                 filename: "[name].js",

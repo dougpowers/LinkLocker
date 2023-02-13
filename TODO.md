@@ -7,9 +7,12 @@
 - [x] Add non-incognito warning
 - [x] Create appropriate \__DEBUG_LIST__ for debugging and README screenshots. Should showcase use cases.
 - [x] Add a debug indicator at the bottom of the App
-- [x] Inject __VERSION__ into App and manifest.json
+- [x] Inject \__VERSION__ into App and manifest.json
 - [x] Change entry dynamic buttons from opacity to display to allow for more width for link display when not hovering
 - [x] Add json download option
+- [ ] Change \__DEBUG_LIST__ to make timestamps randomized across several weeks
+- [ ] Crash webpack if NODE_ENV and BROWSER_ENV are not set
+- [ ] Add ./build/firefox/, ./build/chromium, ./dist/firefox, ./dist/chromium
 
 ## Major tasks
 - [x] Implement link editing and implement edit icon
@@ -22,10 +25,11 @@
 - [x] Add confirmation dialog when deleting a whole host
 - [x] Fix unicode bookmarks changing to ASCII
 - [x] Change popup window.localStorage to background script window.sessionStorage to make all sessions ephemeral
-- [ ] Change LinkLockerLink.href from string to URL
-- [ ] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:'
-- [ ] Add sort options 
+- [x] Change LinkLockerLink.href from string to URL (added LinkLockerLink.url instead)
+- [x] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:' (excluded 'name:')
+- [x] Add sort options 
 - [ ] Add ability to change account password
 - [ ] Add JSON text entry for bookmark import
+- [ ] Add memoization
 - [ ] Add omnibox functionality
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)
