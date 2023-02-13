@@ -1,3 +1,5 @@
+/// <reference types="chrome"/>
+
 import * as browser from "webextension-polyfill";
 
 export type LinkLockerMessageCommand = "set_active_account" | "get_active_account" | "logout";

@@ -11,6 +11,8 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import InfoIcon from "@mui/icons-material/Info";
+import KeyboardDoubleArrowDown from "@mui/icons-material/KeyboardDoubleArrowDown";
+import KeyboardDoubleArrowUp from "@mui/icons-material/KeyboardDoubleArrowUp";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
@@ -29,7 +31,6 @@ import TextField from "@mui/material/TextField";
 import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
-import { FormControl, InputLabel, Select } from "@mui/material";
 
 declare var __IN_DEBUG__: boolean;
 declare var __DEBUG_LIST__: LinkLockerLinkDir;
@@ -41,13 +42,19 @@ type Props = {
     deleteAcct: () => void;
 }
 
+interface LinkLockerLinkResult extends LinkLockerLink {
+    favicon: string,
+}
+
 const enum SortMode {
-    AlphabeticalByTitle,
-    AlphabeticalByTitleReverse,
-    TimestampOldest,
-    TimestampNewest,
-    AlphabeticalByHost,
-    AlphabeticalByHostReverse,
+    AlphabeticalByName = "Name",
+    Timestamp = "Date",
+    AlphabeticalByHost = "Host",
+}
+
+const enum SortDirection {
+    Ascending = "Ascending",
+    Descending = "Descending"
 }
 
 const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) => {
@@ -71,13 +78,16 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const editHostModalCancelButton: any = createRef();
     const linkDisplayBox: any = createRef();
     const searchField: any = createRef();
-    const sortSelect: any = createRef();
+    const sortModeSelector: any = createRef();
+    const sortDirectionSelector: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
     const hamburgerOpen = Boolean(hamburgerAnchorEl);
     const [linkPopoverAnchorEl, setLinkPopoverAnchorEl] = useState<null | HTMLElement>(null);
     const linkPopoverOpen = Boolean(linkPopoverAnchorEl);
     const [hostPopoverAnchorEl, setHostPopoverAnchorEl] = useState<null | HTMLElement>(null);
     const hostPopoverOpen = Boolean(hostPopoverAnchorEl);
+    const [sortModeMenuAnchorEl, setSortModeMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const sortModeMenuOpen = Boolean(sortModeMenuAnchorEl);
     const [acctDeleteDialogOpen, setAcctDeleteDialogOpen] = useState(false);
     const [hostDeleteDialogOpen, setHostDeleteDialogOpen] = useState(false);
     const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
@@ -92,7 +102,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const [host, setHost] = useState<null | LinkLockerLinkHost>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [sortMode, setSortMode] = useState<SortMode>(SortMode.AlphabeticalByHost);
-    const [sortModeSelectValue, setSortModeSelectValue] = useState('');
+    const [sortDirection, setSortDirection] = useState<SortDirection>(SortDirection.Descending);
     const [newHost, setNewHost] = useState(false);
 
     const trimTitle = (title: string, url: URL) => {
@@ -139,18 +149,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         })
 
         return dir;
-    }
-
-    const getHostAndLinkTags = (link: LinkLockerLink, hostTags: Array<string>): Array<string> => {
-        if (hostTags.length > 0) {
-            let dedupTags = hostTags.filter(((v, i, a) => {
-                if (link.tags.find((lv, li, la) => {lv == v})) { return false; }
-            }))
-
-            return link.tags.concat(dedupTags);
-        } else {
-            return link.tags;
-        }
     }
 
     const deleteHost = () => {
@@ -286,22 +284,62 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     }
 
     const removeLink = (link: LinkLockerLink) => {
-        //Splice out link (compared using timestamp)
         let host = linkDir!.hosts.get(new URL(link.href).hostname)!;
         host.links.splice(host.links.findIndex((l) => {if (l.guid == link.guid) {return true;}}), 1);
         if (host.links.length == 0) {linkDir!.hosts.delete(host.hostname);}
-        // linkDir!.links.splice(linkDir!.links!.findIndex((l) => {if (l.guid == guid) {return true;}}), 1);
         updateLinks(linkDir!);
     }
 
     const buildListSorted = (): ReactNode => {
 
-        const getLinkEntry = (link: LinkLockerLink, favicon: (string| null | undefined)): ReactNode => {
+        const resultsFromHosts = (hosts: LinkLockerLinkHost[]): LinkLockerLinkResult[] => {
+            let list: LinkLockerLinkResult[] = new Array();
+            for (let host of hosts) {
+                list = list.concat(host.links.map(l => {return {...l, favicon: host.favicon ? host.favicon : ""}}));
+            }
+            return list;
+        }
+
+        const resultsFromLinks = (links: LinkLockerLink[]): LinkLockerLinkResult[] => {
+            let list: LinkLockerLinkResult[] = links.map(v => {
+                let favicon: (string | undefined) = linkDir?.hosts.get(v.url.hostname)?.favicon;
+                return {...v, favicon: favicon ? favicon : ""}
+            });
+            return list;
+        }
+
+        const hostsFromResults = (results: LinkLockerLinkResult[]): LinkLockerLinkHost[] => {
+            let hosts: LinkLockerLinkHost[] = new Array();
+            for (let result of results) {
+                let index = hosts.findIndex(v => v.hostname == result.url.hostname);
+                if (index >= 0) {
+                    hosts[index].links.push(result);
+                } else {
+                    hosts.push({hostname: result.url.hostname, favicon: result.favicon, links: [result]})
+                }
+            }
+            return hosts;
+        }
+
+        const resultsFromDir = (dir: LinkLockerLinkDir): LinkLockerLinkResult[] => {
+            let linkResults: LinkLockerLinkResult[] = new Array();
+            for (let [hostname, host] of dir.hosts) {
+                linkResults = linkResults.concat(host.links.map(l => {return {...l, favicon: host.favicon ? host.favicon : ""}}))
+            }
+            return linkResults;
+        }
+
+        const tokeniseStringWithQuotesBySpaces = (string: string): string[] => {
+            return string.match(/("[^"]*?"|[^"\s]+)+(?=\s*|\s*$)/g) ?? [];
+        }
+        const getLinkEntry = (link: LinkLockerLink, favicon: (string| null | undefined), padding?: number): ReactNode => {
+            if (!padding) padding = 0.5;
+
             let icon: ReactNode;
             if (favicon == null) {
                 icon = null;
-            } else if (favicon == undefined) {
-                icon = <LinkIcon sx={{fontSize: 16, color: "common.white"}}/>
+            } else if (favicon == undefined || favicon == '') {
+                icon = <LinkIcon sx={{fontSize: 16, color: "text.primary"}}/>
             } else {
                 icon = <img src={favicon} width="16px" height="16px" key={favicon}></img>;
             }
@@ -354,7 +392,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         sx={{
                             pr: 1,
                             pt: 0.25,
-                            ml: 2,
+                            ml: padding,
                             lineHeight: 1,
                             whiteSpace: "nowrap",
                             overflow: "hidden",
@@ -371,12 +409,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                         onMouseLeave={(e) => {
                             setLinkPopoverAnchorEl(null);
                         }}
-                        // onFocus={(e) => {
-                        //     e.currentTarget.style.opacity = "100%"
-                        // }}
-                        // onBlur={(e) => {
-                        //     e.currentTarget.style.opacity = "0%"
-                        // }}
                         sx={{
                             p: "1px",
                             ml: 1.5,
@@ -389,7 +421,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     <InfoIcon 
                         sx={{
                             fontSize: 16, 
-                            color: "common.white",
+                            color: "text.primary",
                             opacity: "inherit",
                         }} 
                     />
@@ -397,13 +429,10 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     <IconButton size="small" 
                         onClick={(e) => {
                             openEditLinkDialog(link);
-                            // e.currentTarget.style.opacity = "0%"
                         }}
                         onFocus={(e) => {
-                            e.currentTarget.style.opacity = "100%"
                         }}
                         onBlur={(e) => {
-                            // e.currentTarget.style.opacity = "0%"
                         }}
                         sx={{
                             p: "1px",
@@ -477,7 +506,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                     :
                                     <LinkIcon sx={{
                                         fontSize: 16,
-                                        color: "common.white"
+                                        color: "text.primary"
                                     }}/>
                                 }
                                 <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
@@ -510,7 +539,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                     <InfoIcon 
                                         sx={{
                                             fontSize: 16, 
-                                            color: "common.white",
+                                            color: "text.primary",
                                             opacity: "inherit",
                                         }} 
                                     />
@@ -547,7 +576,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             <Stack direction="column" justifyItems="left" sx={{mt: 0}} alignItems="left" key={JSON.stringify(host.links.at(0)!.timestamp)}>
                             {host.links.map((link) => {
                                 return (
-                                    getLinkEntry(link, null)
+                                    getLinkEntry(link, null, 2)
                                 );
                             })}
                             </Stack>
@@ -557,26 +586,62 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
             ));
         }
 
-        const renderFlat = (linkHosts: LinkLockerLinkHost[]) => {
-            let links: Array<LinkLockerLink> = new Array();
-            linkHosts.forEach((v, k) => {
-                links = links.concat(v.links);
-            })
+        const renderGroupByDate = (links: LinkLockerLinkResult[]) => {
+            let dateCount = new Date();
 
             return (links.map((link, i) => {
-                // let favicon = linkHosts.get(new URL(link.href).hostname)?.favicon;
-                let favicon = linkHosts.find((v,i,a) => {if (v.hostname == new URL(link.href).hostname) return v;})?.favicon;
+                let header: (ReactNode | null) = null;
+                if (new Date(link.timestamp).toDateString() != dateCount.toDateString()) {
+                    dateCount = new Date(link.timestamp);
+                    header = <Typography variant="body2" sx={{m: .24, p: .24}}>{dateCount.toDateString()}</Typography>
+                }
                 return (
-                    getLinkEntry(link, favicon)
+                    [
+                        header,
+                        getLinkEntry(link, link.favicon, 2),
+                    ]
                 );
             }));
         }
 
-        const sortLinks = (linkDir: LinkLockerLinkDir, sortMode: SortMode): LinkLockerLinkHost[] => {
-            let hosts = Array.from(linkDir.hosts.values());
-            switch (sortMode) {
-                case SortMode.AlphabeticalByHost:
-                    hosts.sort((a,b) => {
+        const renderFlat = (links: LinkLockerLinkResult[]) => {
+            return (links.map((link) => {
+                return (
+                    getLinkEntry(link, link.favicon)
+                );
+            }));
+        }
+
+        const sortLinks = (links: LinkLockerLinkResult[], sortMode: SortMode, sortDirection: SortDirection): LinkLockerLinkResult[] => {
+            links.sort((a,b) => {
+                switch (sortMode) {
+                    case SortMode.AlphabeticalByHost:
+                        return 1;
+                    
+                    case SortMode.AlphabeticalByName:
+                        if (sortDirection == SortDirection.Descending) {
+                            return a.name.localeCompare(b.name);
+                        } else {
+                            return -1*a.name.localeCompare(b.name);
+                        }
+
+                    case SortMode.Timestamp:
+                        if (sortDirection == SortDirection.Descending) {
+                            return b.timestamp - a.timestamp;
+                        } else {
+                            return a.timestamp - b.timestamp;
+                        }
+                }
+            });
+
+            return links;
+        }
+
+
+        const sortHosts = (hosts: LinkLockerLinkHost[], sortMode: SortMode, sortDirection: SortDirection): LinkLockerLinkHost[] => {
+            hosts.sort((a,b) => {
+                switch (sortMode) {
+                    case SortMode.AlphabeticalByHost:
                         let domainsA: Array<string> = a.hostname.split(".");
                         let domainsB: Array<string> = b.hostname.split(".");
                         
@@ -616,102 +681,175 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                 break;
                             }
                         }
-                        return sortA.localeCompare(sortB);
-                    });
-                    break;
-                case SortMode.AlphabeticalByHostReverse:
-                    hosts.sort((a,b) => {
-                        let domainsA: Array<string> = a.hostname.split(".");
-                        let domainsB: Array<string> = b.hostname.split(".");
-                        
-                        if (domainsA && domainsA[0] == "") {
-                            return 1;
-                        } else if (domainsB && domainsB[0] == "") {
-                            return -1;
+                        if (sortDirection == SortDirection.Descending) {
+                            return sortA.localeCompare(sortB);
+                        } else {
+                            return -1*sortA.localeCompare(sortB);
                         }
+                    case SortMode.AlphabeticalByName:
+                        return 1;
+                    case SortMode.Timestamp:
+                        return 1;
+                }
+            });
 
-                        if (domainsA.length > 1) {
-                            domainsA.pop();
-                        }
-                        if (domainsB.length > 1) {
-                            domainsB.pop();
-                        }
-                        let sortA: string;
-                        let sortB: string;
-                        while (true) {
-                            if (domainsA.length == 1) {
-                                sortA = domainsA.at(0) as string;
-                                break;
-                            }
-                            let domain = domainsA.pop() as string;
-                            if (domain.length > 2) {
-                                sortA = domain;
-                                break;
-                            }
-                        }
-                        while (true) {
-                            if (domainsB.length == 1) {
-                                sortB = domainsB.at(0) as string;
-                                break;
-                            }
-                            let domain = domainsB.pop() as string;
-                            if (domain.length > 2) {
-                                sortB = domain;
-                                break;
-                            }
-                        }
-                        return -1*sortA.localeCompare(sortB);
-                    });
-                    break;
-                case SortMode.TimestampNewest:
-                    break;
-                case SortMode.TimestampOldest:
-                
-                    break;
-                case SortMode.AlphabeticalByTitle:
-                
-                    break;
-                case SortMode.AlphabeticalByTitleReverse:
-                
-                    break;
-            }
             return hosts;
         }
 
-        type RenderFunction = (h: LinkLockerLinkHost[]) => ReactNode;
-        let renderFunction: RenderFunction = renderGroupByHost;
-
         if(linkDir != null && linkDir.hosts.size > 0 && searchTerm == "") {
-            return renderFunction(sortLinks(linkDir, sortMode));
-        } else if (searchTerm != "" && linkDir) {
-            renderFunction = renderFlat;
-
-            let hosts = Array.from(linkDir.hosts.values());
-            let links: Array<LinkLockerLink> = new Array();
-            hosts.forEach((v, i) => {
-                links = links.concat(v.links);
-            });
-
-            const fuse = new Fuse(links, {
-                keys: [
-                    {name: "name", weight: 0.8}, 
-                    {name: "href", weight: 0.3}, 
-                    {name: "tags", weight: 1},
-                ],
-                useExtendedSearch: true,
-                threshold: 0.4,
-            });
-
-            const result = fuse.search(searchTerm);
-            if (result.length > 0) {
-                return renderFunction(
-                    Array.from(dirFromList(result.map((v,i) => {return v.item;}) as LinkLockerLink[], linkDir).hosts.values())
-                );
-            } else {
-                return (
-                    <Typography variant="body2">No results found.</Typography>
-                )
+            if (sortMode == SortMode.AlphabeticalByHost) {
+                return renderGroupByHost(sortHosts(Array.from(linkDir.hosts.values()), sortMode, sortDirection));
+            } else if (sortMode == SortMode.AlphabeticalByName) {
+                return renderFlat(sortLinks(resultsFromDir(linkDir), sortMode, sortDirection));
+            } else if (sortMode == SortMode.Timestamp) {
+                return renderGroupByDate(sortLinks(resultsFromDir(linkDir), sortMode, sortDirection));
             }
+        } else if (searchTerm != "" && linkDir) {
+            let excludedHosts: string[] = [];
+            let includedHosts: string[] = [];
+            let includedTags: string[] = [];
+            let excludedTags: string[] = [];
+
+            let query: string = searchTerm;
+            let hosts = Array.from(linkDir.hosts.values());
+
+            query = query.replaceAll(
+                /(\+|-)?(?:site:|host:)([^\s]*)/g, 
+                (_match, p1, p2) => {
+                    if (p1 === "-") {
+                        excludedHosts.push(p2);
+                    } else {
+                        includedHosts.push(p2)
+                    }
+                    return "";
+                }
+            )
+
+            query = query.replaceAll(
+                /(\+|-)?tag:([^\s]*)/g, 
+                (_match, p1, p2) => {
+                    if (p1 === "-") {
+                        excludedTags.push(p2);
+                    } else {
+                        includedTags.push(p2)
+                    }
+                    return "";
+                }
+            )
+
+            if (includedHosts.length > 0) {
+                hosts = hosts.filter((v) => {
+                    for (let incl of includedHosts) {
+                        if (v.hostname.match(incl)) {return true;} else {return false;}
+                    }
+                });
+            } else if (excludedHosts.length > 0) {
+                hosts = hosts.filter((v) => {
+                    for (let excl of excludedHosts) {
+                        if (v.hostname.match(excl)) {return false;} else {return true;}
+                    }
+                })
+            }
+
+            if (includedTags.length > 0) {
+                let filteredHosts: LinkLockerLinkHost[] = new Array();
+                for (let host of hosts) {
+                    let links = host.links.filter((link) => {
+                        for (let tag of link.tags) {
+                            for (let incl of includedTags) {
+                                if (tag == incl) {
+                                    return true;
+                                }
+                            }
+                        }
+                        return false;
+                    })
+                    if (links.length > 0) filteredHosts.push({...host, links: links})
+                }
+                hosts = filteredHosts;
+            }
+
+            if (excludedTags.length > 0) {
+                let filteredHosts: LinkLockerLinkHost[] = new Array();
+                for (let host of hosts) {
+                    let links = host.links.filter((link) => {
+                        for (let tag of link.tags) {
+                            for (let excl of excludedTags) {
+                                if (tag == excl) {
+                                    return false;
+                                }
+                            }
+                        }
+                        return true;
+                    })
+                    if (links.length > 0) filteredHosts.push({...host, links: links})
+                }
+                hosts = filteredHosts;
+            }
+
+
+            if (!(query.match(/^[\s]*$/))) {
+                let tokenizedTerm = tokeniseStringWithQuotesBySpaces(query);
+
+                let linkList = hosts.flatMap(v => {return v.links;})
+
+                const fuse = new Fuse(linkList, {
+                    keys: [
+                        {name: "name", weight: 0.8}, 
+                        {name: "href", weight: 0.3}, 
+                        {name: "tags", weight: 1},
+                    ],
+                    useExtendedSearch: true,
+                    threshold: 0.2,
+                    findAllMatches: true,
+                    ignoreLocation: true,
+                });
+
+                const result = fuse.search({
+                    $and: tokenizedTerm.map((searchToken: string) => {
+                        const orFields: Fuse.Expression[] = [
+                            { "name": searchToken },
+                            { "href": searchToken },
+                            { "tags": searchToken },
+                        ];
+
+                        return {
+                            $or: orFields,
+                        };
+                    }),
+                });
+
+                if (result.length > 0) {
+                    if (sortMode == SortMode.AlphabeticalByName) {
+                        return renderFlat(
+                            sortLinks(resultsFromLinks(result.map(r => {return r.item})), sortMode, sortDirection)
+                        );
+                    } else if (sortMode == SortMode.AlphabeticalByHost) {
+                        return renderGroupByHost(sortHosts(hostsFromResults(result.map(r => {return {...r.item, favicon: linkDir?.hosts.get(r.item.url.hostname)?.favicon as string}})), sortMode, sortDirection))
+                    } else if (sortMode == SortMode.Timestamp) {
+                        return renderGroupByDate(sortLinks(resultsFromLinks(result.map(r => {return r.item})), sortMode, sortDirection))
+                    }
+                } else {
+                    return (
+                        <Typography variant="body2">No results found.</Typography>
+                    );
+                }
+            } else {
+                if (hosts.length == 0) {
+                    return (
+                        <Typography variant="body2">No results found.</Typography>
+                    );
+                }
+                if (sortMode == SortMode.AlphabeticalByHost) {
+                    return renderGroupByHost(
+                        Array.from(sortHosts(hosts, sortMode, sortDirection))
+                    );
+                } else if (sortMode == SortMode.AlphabeticalByName) {
+                    return renderFlat(sortLinks(resultsFromHosts(hosts), sortMode, sortDirection));
+                } else {
+                    return renderGroupByDate(sortLinks(resultsFromHosts(hosts), sortMode, sortDirection));
+                }
+            } 
         } else if ((linkDir == null || linkDir.hosts.size == 0)) {
             return (
                 <Typography variant="body2">No links saved.</Typography>
@@ -777,44 +915,95 @@ return (
             maxWidth={constants.INNER_MAX_WIDTH} 
             sx={{
         }}>
-            <Stack direction="row">
-                <TextField
-                    variant="outlined"
-                    size="small"
-                    label="Search Links"
-                    inputRef={searchField}
-                    fullWidth
-                    InputProps={{
-                        endAdornment: <InputAdornment position="end">
-                            <SearchIcon fontSize="small" />
-                            </InputAdornment>,
+            <TextField
+                variant="outlined"
+                size="small"
+                label="Search Links"
+                inputRef={searchField}
+                fullWidth
+                InputProps={{
+                    endAdornment: <InputAdornment position="end">
+                        <SearchIcon fontSize="small" />
+                        </InputAdornment>,
+                }}
+                sx={{marginBottom: "4px"}}
+                onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); searchField.current.select()}}}
+            />
+            <Stack direction="row" alignItems="center" sx={{mb: "0.4rem", mt: "0.2rem"}}>
+                <Typography
+                    variant="body2"
+                    sx={{
+                        color: "text.primary",
+                        mr: "0.3rem"
+                    }} 
+                >
+                    Sort by
+                </Typography>
+                <Typography
+                    variant="body2"
+                    sx={{
+                        cursor: "pointer",
+                    }} 
+                    bgcolor="primary.main"
+                    borderRadius="6px"
+                    pl="0.2rem"
+                    pr="0.2rem"
+                    color="primary.contrastText"
+                    mr="0.05rem"
+                    onClick={(e) => {setSortModeMenuAnchorEl(e.currentTarget)}}
+                    ref={sortModeSelector}
+                >
+                    {sortMode}
+                </Typography>
+                {
+                    sortDirection == SortDirection.Descending ?
+                        <KeyboardDoubleArrowDown 
+                            ref={sortDirectionSelector} 
+                            sx={{
+                                cursor: "pointer", 
+                                fontSize: 16, 
+                                color: "primary.main",
+                            }} 
+                            onClick={() => {setSortDirection(SortDirection.Ascending); linkDisplayBox.current.scrollTo(0,0)}}
+                        />
+                    :
+                        <KeyboardDoubleArrowUp 
+                            ref={sortDirectionSelector} 
+                            sx={{
+                                // backgroundColor: "primary.main", 
+                                // borderRadius: "6px",
+                                cursor: "pointer", 
+                                fontSize: 16, 
+                                // color: "primary.contrastText", 
+                                color: "primary.main",
+                            }} 
+                            onClick={() => {setSortDirection(SortDirection.Descending); linkDisplayBox.current.scrollTo(0,0)}}
+                        />
+                }
+                <Menu 
+                    id="sort-menu" 
+                    anchorEl={sortModeMenuAnchorEl} 
+                    open={sortModeMenuOpen}
+                    onClose={() => {setSortModeMenuAnchorEl(null)}}
+                    anchorOrigin={{
+                        vertical: "bottom",
+                        horizontal: "left"
                     }}
-                    sx={{marginBottom: "4px"}}
-                    onFocus={(e) => {sortSelect.current.value = ""}}
-                    onBlur={(e) => {sortSelect.current.value = sortMode}}
-                    onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); searchField.current.select()}}}
-                />
-                <FormControl sx={{ml: 0.5, width: "8.5rem"}}>
-                    <InputLabel id="sort-select-label">Sort</InputLabel>
-                    <Select
-                        // ref={sortSelect}
-                        inputRef={sortSelect}
-                        size="small"
-                        labelId="sort-select-label"
-                        id="sort-select"
-                        value={sortMode}
-                        label="Sort"
-                        onChange={(e) => {setSortMode(e.target.value as SortMode); linkDisplayBox.current.scrollTo(0,0);}}
-                    >
-                        <MenuItem dense hidden value=""> </MenuItem>
-                        <MenuItem dense value={SortMode.AlphabeticalByHost}>Host A-Z</MenuItem>
-                        <MenuItem dense value={SortMode.AlphabeticalByHostReverse}>Host Z-A</MenuItem>
-                        <MenuItem dense value={SortMode.TimestampNewest}>Newest</MenuItem>
-                        <MenuItem dense value={SortMode.TimestampOldest}>Oldest</MenuItem>
-                        <MenuItem dense value={SortMode.AlphabeticalByTitle}>Name A-Z</MenuItem>
-                        <MenuItem dense value={SortMode.AlphabeticalByTitleReverse}>Name Z-A</MenuItem>
-                    </Select>
-                </FormControl>
+                    transformOrigin={{
+                        vertical: "top",
+                        horizontal: "left"
+                    }}
+                >
+                    <MenuItem dense key="sort-host-alpha" 
+                        onClick={() => {setSortMode(SortMode.AlphabeticalByHost); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
+                    >Host</MenuItem>
+                    <MenuItem dense key="sort-title-alpha" 
+                        onClick={() => {setSortMode(SortMode.AlphabeticalByName); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
+                    >Name</MenuItem>
+                    <MenuItem dense key="sort-timestamp" 
+                        onClick={() => {setSortMode(SortMode.Timestamp); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
+                    >Date</MenuItem>
+                </Menu>
             </Stack>
             <Box 
                 boxSizing="border-box"

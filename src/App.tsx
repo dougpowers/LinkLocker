@@ -13,7 +13,6 @@ import ViewLinks from "./ViewLinks";
 import CryptoJS from "crypto-js";
 import LoadingButton from "@mui/lab/LoadingButton";
 import * as constants from "./constants";
-import Modal from "@mui/material/Modal";
 
 declare var __IN_DEBUG__: boolean;
 declare var __DEBUG_LIST__: LinkLockerLinkDir;
@@ -88,7 +87,6 @@ export interface LinkLockerLink {
 
 export interface LinkLockerLinkDir {
     hosts: Map<string, LinkLockerLinkHost>,
-    listCache?: LinkLockerLink[]
 } 
 
 export type LinkLockerLinkHost = {
@@ -121,17 +119,6 @@ export const darkTheme = createTheme({
         mode: constants.PALETTE_MODE,
     },
 });
-
-export const buildDirCache = (dir: LinkLockerLinkDir) => {
-    for (let v of dir.hosts.values()) {
-        if (dir.listCache) {
-            dir.listCache = dir.listCache.concat(v.links);
-        } else {
-            dir.listCache = new Array();
-        }
-    }
-
-}
 
 //Returns a random string of characters [A-Za-z0-9] of specified length
 const makeSalt = (length: number): string => {
@@ -304,6 +291,11 @@ const App = () => {
                                 linkList = null;
                             } else if (linkObject.hosts) {
                                 linkList = linkObject as LinkLockerLinkDir;
+                                for (let [hostname, host] of linkList.hosts) {
+                                    for (let link of host.links) {
+                                        if (!link.url) link.url = new URL(link.href)
+                                    }
+                                }
                             } else {
                                 linkList = null;
                             }
