@@ -10,8 +10,8 @@
 - [x] Inject \__VERSION__ into App and manifest.json
 - [x] Change entry dynamic buttons from opacity to display to allow for more width for link display when not hovering
 - [x] Add json download option
+- [x] Change \__DEBUG_LIST__ to make timestamps randomized across several weeks
 - [ ] Open all links button at bottom of screen (warning if over MAX_NUM_TAB_OPENS)
-- [ ] Change \__DEBUG_LIST__ to make timestamps randomized across several weeks
 - [ ] Crash webpack if NODE_ENV and BROWSER_ENV are not set
 - [ ] Add ./build/firefox/, ./build/chromium, ./dist/firefox, ./dist/chromium
 

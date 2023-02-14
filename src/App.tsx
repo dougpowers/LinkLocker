@@ -22,7 +22,7 @@ type ConfigReducerAction =
     | {
         type: "newConfig";
         payload: {
-            newConfig: LinkLockerConfig;
+            newConfig: LinkLockerConfig,
         }
     }
     | {
@@ -34,14 +34,14 @@ type ConfigReducerAction =
     | {
         type: "newCipher";
         payload: {
-            guid: string;
-            newCipher: LinkLockerCipherParams;
+            guid: string,
+            newCipher: LinkLockerCipherParams,
         }
     }
     | {
         type: "removeAcct";
         payload: {
-            guid: string;
+            guid: string,
         }
     }
 
@@ -49,12 +49,25 @@ type ActiveAccountReducerAction =
     | {
         type: "updateLinks";
         payload: {
-            newLinkDir: LinkLockerLinkDir;
+            newLinkDir: LinkLockerLinkDir,
         }
     }
     | {
         type: "login";
         payload: LinkLockerActiveAccount;
+    }
+    | {
+        type: "updateSort";
+        payload: {
+            sortMode: SortMode,
+            sortDirection: SortDirection,
+        }
+    }
+    | {
+        type: "updateSearchTerm";
+        payload: {
+            searchTerm: string,
+        }
     }
 
 interface LinkLockerConfig {
@@ -97,9 +110,12 @@ export type LinkLockerLinkHost = {
 }
 
 export type LinkLockerActiveAccount = {
-    guid: string;
-    cipherHash: string;
-    linkDir: LinkLockerLinkDir | null;
+    guid: string,
+    cipherHash: string,
+    linkDir: LinkLockerLinkDir | null,
+    sortMode: SortMode,
+    sortDirection: SortDirection,
+    searchTerm: string,
 }
 
 //Define the possible states for the four possible rendered components
@@ -145,7 +161,9 @@ export const JsonReviver = (key: any, value: any) => {
     if (typeof value === 'object' && value !== null) {
         if (value.dataType === 'Map') {
             return new Map(value.value);
-        }
+        } 
+    } else if (key === 'url') {
+        return new URL(value);
     }
     return value;
 }
@@ -167,11 +185,15 @@ const App = () => {
 
     //State reducer for activeAccount. An empty guid is taken to mean that there is no user logged in.
     //links added and removed from the ViewLinks component are contemporaneously stored in activeAccount.linkList
-    const activeAccountReducer = (activeAccount: LinkLockerActiveAccount, action: ActiveAccountReducerAction): any => {
+    const activeAccountReducer = (activeAccount: LinkLockerActiveAccount, action: ActiveAccountReducerAction): LinkLockerActiveAccount => {
         if (action.type === "updateLinks") {
             return {...activeAccount, linkDir: action.payload.newLinkDir};
         } else if (action.type === "login") {
-            return {guid: action.payload.guid, cipherHash: action.payload.cipherHash, linkDir: action.payload.linkDir} as LinkLockerActiveAccount;
+            return action.payload;
+        } else if (action.type === "updateSort") {
+            return {...activeAccount, sortMode: action.payload.sortMode, sortDirection: action.payload.sortDirection};
+        } else {
+            return {...activeAccount, searchTerm: action.payload.searchTerm};
         }
     }
 
@@ -205,7 +227,7 @@ const App = () => {
     // in empty config in getConfigsFromStorage function should the storedConfig actually be empty.
     const [config, configDispatch] = useReducer(configReducer, {accounts: new Array()}); 
     const [renderedComponent, updateRenderedComponent] = useState(RenderedComponent.Loading);
-    const [activeAccount, activeAccountDispatch] = useReducer(activeAccountReducer, {guid: "", cipherHash: "", links: null});
+    const [activeAccount, activeAccountDispatch] = useReducer(activeAccountReducer, {guid: "", cipherHash: "", linkDir: null, sortMode: SortMode.AlphabeticalByHost, sortDirection: SortDirection.Descending, searchTerm: ""});
     //Global state that the last login failed. Used by Login component to put the passwordInput into fail style.
     const [failedLogin, updateFailedLogin] = useState(false);
     const [addingNewAcct, updateAddingNewAcct] = useState(false);
@@ -303,12 +325,15 @@ const App = () => {
                     let newActiveAccount: LinkLockerActiveAccount = {
                         guid: guid,
                         cipherHash: res.encoded,
-                        linkDir: linkDir
+                        linkDir,
+                        sortMode: SortMode.AlphabeticalByHost,
+                        sortDirection: SortDirection.Descending,
+                        searchTerm: "",
                     };
                     let sessionConfig = JSON.stringify(newActiveAccount, JsonReplacer);
                     browser.runtime.sendMessage({command: "set_active_account", string: sessionConfig});
                     // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount, JsonReplacer));
-                    activeAccountDispatch({type: "login", payload: {guid: newActiveAccount.guid, cipherHash: newActiveAccount.cipherHash, linkDir: newActiveAccount.linkDir}})
+                    activeAccountDispatch({type: "login", payload: newActiveAccount})
                 });
                 setIsLoading(false);
             }).catch((err) => {
@@ -323,7 +348,7 @@ const App = () => {
         //Delete the active session
         // window.localStorage.removeItem("sessionConfig");
         browser.runtime.sendMessage(null, {command: "logout"})
-        activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkDir: null}})
+        activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkDir: null, sortMode: SortMode.AlphabeticalByHost, sortDirection: SortDirection.Descending, searchTerm: ""}})
     }
 
     const deleteAcct = () => {
@@ -339,9 +364,16 @@ const App = () => {
     //Update links in the decrypted activeAccount.linkList variable and also the encrypted config.accounts[activeAccount.guid].cipher variable
     const updateLinks = (linkDir: LinkLockerLinkDir) => {
         let acct = getAcct(activeAccount!.guid);
-        let newActiveAccountObject: LinkLockerActiveAccount = {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkDir: linkDir};
+        let newActiveAccountObject: LinkLockerActiveAccount = {...activeAccount, linkDir: linkDir};
         // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject, JsonReplacer));
+        for (let [hostname, host] of linkDir.hosts) {
+            for (let link of host.links) {
+                console.debug(link.url);
+            }
+        }
         browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify(newActiveAccountObject, JsonReplacer)});
+        activeAccountDispatch({type: "updateLinks", payload: {newLinkDir: linkDir}})
+
         let encrypted = CryptoJS.AES.encrypt(JSON.stringify(linkDir, JsonReplacer), newActiveAccountObject.cipherHash);
         //Create serializable LinkLockerBasicCipherParams from the fresh CryptoJS CipherParams
         acct.cipher = {
@@ -350,7 +382,16 @@ const App = () => {
             s: encrypted.salt.toString()
         }
         configDispatch({type: "newCipher", payload: {guid: acct.guid, newCipher: acct.cipher}})
-        activeAccountDispatch({type: "updateLinks", payload: {newLinkDir: linkDir}})
+    }
+
+    const updateSort = (sortMode: SortMode, sortDirection: SortDirection) => {
+        browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify({...activeAccount, sortMode, sortDirection}, JsonReplacer)});
+        activeAccountDispatch({type: "updateSort", payload: {sortMode, sortDirection}})
+    }
+
+    const updateSearchTerm = (searchTerm: string) => {
+        browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify({...activeAccount, searchTerm}, JsonReplacer)});
+        activeAccountDispatch({type: "updateSearchTerm", payload: {searchTerm}})
     }
 
     //Async function ran on every popup open to get the "config" key from local extension storage and prime the app state
@@ -368,7 +409,7 @@ const App = () => {
             browser.runtime.sendMessage(null, {command: "get_active_account"}).then((payload) => {
                 if (payload && payload.string) {
                     let activeAccount = JSON.parse(payload.string, JsonReviver) as LinkLockerActiveAccount;
-                    activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkDir: activeAccount.linkDir}})
+                    activeAccountDispatch({type: "login", payload: activeAccount})
                 }
             });
 
@@ -485,8 +526,13 @@ const App = () => {
                             <ViewLinks 
                                 linkDir={activeAccount ? activeAccount!["linkDir"] : null} 
                                 updateLinks={updateLinks} 
+                                updateSort={updateSort}
+                                updateSearchTerm={updateSearchTerm}
                                 logout={logout} 
                                 deleteAcct={deleteAcct} 
+                                startSortMode={activeAccount.sortMode}
+                                startSortDirection={activeAccount.sortDirection}
+                                startSearchTerm={activeAccount.searchTerm}
                             />
                             :
                             null

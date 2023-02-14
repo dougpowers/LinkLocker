@@ -3,7 +3,11 @@
     <meta charset="UTF-8">
     <head>
         <style type="text/css">
-            body {
+            :root {
+                scrollbar-width: none;
+                overflow-y: hidden;
+            }
+            body, div.reactapp {
                 min-width: 310px;
                 max-width: 420px;
                 position: relative;
@@ -15,7 +19,7 @@
         </style>
     </head>
     <body>
-        <div id="reactapp"></div>
+        <div id="reactapp" class="reactapp"></div>
         <script src="main.js" charset="UTF-8"></script>
     </body>
 </html>

@@ -15,15 +15,6 @@ const JsonReplacer = (key, value) => {
     }
 }
 
-const JsonReviver = (key, value) => {
-    if (typeof value === 'object' && value !== null) {
-        if (value.dataType === 'Map') {
-            return new Map(value.value);
-        }
-    }
-    return value;
-}
-
 switch (process.env.NODE_ENV) {
     case 'production':
         module.exports = {
@@ -144,9 +135,7 @@ switch (process.env.NODE_ENV) {
                 new webpack.DefinePlugin({
                     __VERSION__: JSON.stringify(npm_package_json.version),
                     __IN_DEBUG__: JSON.stringify(true),
-                    __DEBUG_LIST__: JSON.stringify(
-                        fs.readFileSync(path.join(__dirname, "..", "debug", "debug_list.json"), "utf-8"),
-                        JsonReplacer),
+                    __DEBUG_LIST__: JSON.stringify(fs.readFileSync(path.join(__dirname, "..", "debug", "debug_list.json"), "utf-8")),
                 }),
             ]
         }

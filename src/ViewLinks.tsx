@@ -38,6 +38,11 @@ declare var __DEBUG_LIST__: string;
 type Props = {
     linkDir: LinkLockerLinkDir | null,
     updateLinks: (linkList: LinkLockerLinkDir) => void,
+    updateSort: (sortMode: SortMode, sortDirection: SortDirection) => void,
+    updateSearchTerm: (searchTerm: string) => void,
+    startSortMode: SortMode,
+    startSortDirection: SortDirection,
+    startSearchTerm: string,
     logout: () => void;
     deleteAcct: () => void;
 }
@@ -53,11 +58,11 @@ export const enum SortMode {
 }
 
 export const enum SortDirection {
-    Ascending = "Ascending",
-    Descending = "Descending"
+    Descending = "Descending",
+    Ascending = "Ascending"
 }
 
-const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) => {
+const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm, startSortMode, startSortDirection, startSearchTerm, logout, deleteAcct}: Props) => {
     
     var entryScrollAmount: number = 0;
     var entryScrollInterval: number;
@@ -78,6 +83,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const editHostModalCancelButton: any = createRef();
     const linkDisplayBox: any = createRef();
     const searchField: any = createRef();
+    const sortModeMenu: any = createRef();
     const sortModeSelector: any = createRef();
     const sortDirectionSelector: any = createRef();
     const [hamburgerAnchorEl, setHamburgerAnchorEl] = useState<null | HTMLElement>(null);
@@ -100,9 +106,9 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
     const [linkName, setLinkName] = useState("");
     const [linkTags, setLinkTags] = useState("");
     const [host, setHost] = useState<null | LinkLockerLinkHost>(null);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [sortMode, setSortMode] = useState<SortMode>(SortMode.AlphabeticalByHost);
-    const [sortDirection, setSortDirection] = useState<SortDirection>(SortDirection.Descending);
+    const [searchTerm, setSearchTerm] = useState(startSearchTerm);
+    const [sortMode, setSortMode] = useState<SortMode>(startSortMode);
+    const [sortDirection, setSortDirection] = useState<SortDirection>(startSortDirection);
     const [newHost, setNewHost] = useState(false);
 
     const trimTitle = (title: string, url: URL) => {
@@ -308,7 +314,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
 
         const hostsFromResults = (results: LinkLockerLinkResult[]): LinkLockerLinkHost[] => {
             let hosts: LinkLockerLinkHost[] = new Array();
-            console.debug(results);
             for (let result of results) {
                 let index = hosts.findIndex(v => v.hostname == result.url.hostname);
                 if (index >= 0) {
@@ -317,7 +322,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     hosts.push({hostname: result.url.hostname, favicon: result.favicon, links: [result]})
                 }
             }
-            console.debug(hosts);
             return hosts;
         }
 
@@ -824,8 +828,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             sortLinks(resultsFromLinks(result.map(r => {return r.item})), sortMode, sortDirection)
                         );
                     } else if (sortMode == SortMode.AlphabeticalByHost) {
-                        console.debug(linkDir);
-                        return renderGroupByHost(sortHosts(hostsFromResults(result.map(r => {console.debug(r.item.url);return {...r.item, favicon: linkDir?.hosts.get(r.item.url.hostname)?.favicon as string}})), sortMode, sortDirection))
+                        return renderGroupByHost(sortHosts(hostsFromResults(result.map(r => {return {...r.item, favicon: linkDir?.hosts.get(r.item.url.hostname)?.favicon as string}})), sortMode, sortDirection))
                     } else if (sortMode == SortMode.Timestamp) {
                         return renderGroupByDate(sortLinks(resultsFromLinks(result.map(r => {return r.item})), sortMode, sortDirection))
                     }
@@ -925,7 +928,8 @@ return (
                         </InputAdornment>,
                 }}
                 sx={{marginBottom: "4px"}}
-                onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); searchField.current.select()}}}
+                onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); updateSearchTerm(searchField.current.value); searchField.current.select()}}}
+                defaultValue={searchTerm}
             />
             <Stack direction="row" alignItems="center" sx={{mb: "0.4rem", mt: "0.2rem"}}>
                 <Typography
@@ -963,7 +967,7 @@ return (
                                 fontSize: 16, 
                                 color: "primary.main",
                             }} 
-                            onClick={() => {setSortDirection(SortDirection.Ascending); linkDisplayBox.current.scrollTo(0,0)}}
+                            onClick={() => {setSortDirection(SortDirection.Ascending); updateSort(sortMode, SortDirection.Ascending); linkDisplayBox.current.scrollTo(0,0)}}
                         />
                     :
                         <KeyboardDoubleArrowUp 
@@ -976,7 +980,7 @@ return (
                                 // color: "primary.contrastText", 
                                 color: "primary.main",
                             }} 
-                            onClick={() => {setSortDirection(SortDirection.Descending); linkDisplayBox.current.scrollTo(0,0)}}
+                            onClick={() => {setSortDirection(SortDirection.Descending); updateSort(sortMode, SortDirection.Descending); linkDisplayBox.current.scrollTo(0,0)}}
                         />
                 }
                 <Menu 
@@ -992,15 +996,17 @@ return (
                         vertical: "top",
                         horizontal: "left"
                     }}
+                    ref={sortModeMenu}
+                    defaultValue={sortMode}
                 >
-                    <MenuItem dense key="sort-host-alpha" 
-                        onClick={() => {setSortMode(SortMode.AlphabeticalByHost); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
+                    <MenuItem dense key={SortMode.AlphabeticalByHost} 
+                        onClick={() => {setSortMode(SortMode.AlphabeticalByHost); updateSort(SortMode.AlphabeticalByHost, sortDirection); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Host</MenuItem>
-                    <MenuItem dense key="sort-title-alpha" 
-                        onClick={() => {setSortMode(SortMode.AlphabeticalByName); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
+                    <MenuItem dense key={SortMode.AlphabeticalByName} 
+                        onClick={() => {setSortMode(SortMode.AlphabeticalByName); updateSort(SortMode.AlphabeticalByName, sortDirection); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Name</MenuItem>
-                    <MenuItem dense key="sort-timestamp"
-                        onClick={() => {setSortMode(SortMode.Timestamp); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
+                    <MenuItem dense key={SortMode.Timestamp}
+                        onClick={() => {setSortMode(SortMode.Timestamp); updateSort(SortMode.Timestamp, sortDirection); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Date</MenuItem>
                 </Menu>
             </Stack>
@@ -1084,6 +1090,10 @@ return (
                                 divider
                                 onClick={() => {
                                     // let debugList: LinkLockerLinkDir = JSON.parse(JSON.stringify(__DEBUG_LIST__, JsonReplacer), JsonReviver);
+                                    let urlObject = {url: new URL("https://cnn.com")};
+                                    let urlJson = JSON.stringify(urlObject, JsonReplacer);
+                                    let {url: newUrl} = JSON.parse(urlJson, JsonReviver);
+                                    console.warn(newUrl);
                                     let debugList: LinkLockerLinkDir = JSON.parse(__DEBUG_LIST__, JsonReviver);
                                     for (let [hostname, host] of debugList.hosts) {
                                         for (let link of host.links) {
