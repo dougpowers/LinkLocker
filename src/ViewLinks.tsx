@@ -33,7 +33,7 @@ import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
 
 declare var __IN_DEBUG__: boolean;
-declare var __DEBUG_LIST__: LinkLockerLinkDir;
+declare var __DEBUG_LIST__: string;
 
 type Props = {
     linkDir: LinkLockerLinkDir | null,
@@ -46,13 +46,13 @@ interface LinkLockerLinkResult extends LinkLockerLink {
     favicon: string,
 }
 
-const enum SortMode {
+export const enum SortMode {
     AlphabeticalByName = "Name",
     Timestamp = "Date",
     AlphabeticalByHost = "Host",
 }
 
-const enum SortDirection {
+export const enum SortDirection {
     Ascending = "Ascending",
     Descending = "Descending"
 }
@@ -238,8 +238,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     url: url
                 }
                 
-                // let url = new URL(link.href);
-
                 if (linkDir == null) {
                     linkDir = {hosts: new Map()};
                     linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link], tags: newHostTags});
@@ -310,6 +308,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
 
         const hostsFromResults = (results: LinkLockerLinkResult[]): LinkLockerLinkHost[] => {
             let hosts: LinkLockerLinkHost[] = new Array();
+            console.debug(results);
             for (let result of results) {
                 let index = hosts.findIndex(v => v.hostname == result.url.hostname);
                 if (index >= 0) {
@@ -318,6 +317,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     hosts.push({hostname: result.url.hostname, favicon: result.favicon, links: [result]})
                 }
             }
+            console.debug(hosts);
             return hosts;
         }
 
@@ -509,7 +509,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                                         color: "text.primary"
                                     }}/>
                                 }
-                                <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname.substring(0, 2)}>
+                                <Typography variant="body2" sx={{ml: 0.5}} key={host.hostname}>
                                     {host.hostname}
                                 </Typography>
                                 <Box flexGrow={1}/>
@@ -587,7 +587,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
         }
 
         const renderGroupByDate = (links: LinkLockerLinkResult[]) => {
-            let dateCount = new Date();
+            let dateCount = new Date(0);
 
             return (links.map((link, i) => {
                 let header: (ReactNode | null) = null;
@@ -636,7 +636,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
 
             return links;
         }
-
 
         const sortHosts = (hosts: LinkLockerLinkHost[], sortMode: SortMode, sortDirection: SortDirection): LinkLockerLinkHost[] => {
             hosts.sort((a,b) => {
@@ -825,7 +824,8 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                             sortLinks(resultsFromLinks(result.map(r => {return r.item})), sortMode, sortDirection)
                         );
                     } else if (sortMode == SortMode.AlphabeticalByHost) {
-                        return renderGroupByHost(sortHosts(hostsFromResults(result.map(r => {return {...r.item, favicon: linkDir?.hosts.get(r.item.url.hostname)?.favicon as string}})), sortMode, sortDirection))
+                        console.debug(linkDir);
+                        return renderGroupByHost(sortHosts(hostsFromResults(result.map(r => {console.debug(r.item.url);return {...r.item, favicon: linkDir?.hosts.get(r.item.url.hostname)?.favicon as string}})), sortMode, sortDirection))
                     } else if (sortMode == SortMode.Timestamp) {
                         return renderGroupByDate(sortLinks(resultsFromLinks(result.map(r => {return r.item})), sortMode, sortDirection))
                     }
@@ -841,9 +841,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, logout, deleteAcct}: Props) =
                     );
                 }
                 if (sortMode == SortMode.AlphabeticalByHost) {
-                    return renderGroupByHost(
-                        Array.from(sortHosts(hosts, sortMode, sortDirection))
-                    );
+                    return renderGroupByHost(sortHosts(hosts, sortMode, sortDirection));
                 } else if (sortMode == SortMode.AlphabeticalByName) {
                     return renderFlat(sortLinks(resultsFromHosts(hosts), sortMode, sortDirection));
                 } else {
@@ -934,7 +932,8 @@ return (
                     variant="body2"
                     sx={{
                         color: "text.primary",
-                        mr: "0.3rem"
+                        ml: "0.4rem",
+                        mr: "0.3rem",
                     }} 
                 >
                     Sort by
@@ -1000,7 +999,7 @@ return (
                     <MenuItem dense key="sort-title-alpha" 
                         onClick={() => {setSortMode(SortMode.AlphabeticalByName); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Name</MenuItem>
-                    <MenuItem dense key="sort-timestamp" 
+                    <MenuItem dense key="sort-timestamp"
                         onClick={() => {setSortMode(SortMode.Timestamp); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Date</MenuItem>
                 </Menu>
@@ -1084,8 +1083,14 @@ return (
                                 key="add_debug_links"
                                 divider
                                 onClick={() => {
-                                    let linkDir = JSON.parse(JSON.stringify(__DEBUG_LIST__, JsonReplacer), JsonReviver);
-                                    updateLinks(linkDir);
+                                    // let debugList: LinkLockerLinkDir = JSON.parse(JSON.stringify(__DEBUG_LIST__, JsonReplacer), JsonReviver);
+                                    let debugList: LinkLockerLinkDir = JSON.parse(__DEBUG_LIST__, JsonReviver);
+                                    for (let [hostname, host] of debugList.hosts) {
+                                        for (let link of host.links) {
+                                            link.url = new URL(link.href);
+                                        }
+                                    }
+                                    updateLinks(debugList);
                                     handleHamburgerClose();
                                 }}
                                 sx={{color: "secondary.main"}}

@@ -9,7 +9,7 @@ import * as browser from "webextension-polyfill";
 import argon2 from "argon2-browser";
 import AcctCreate from "./AcctCreate";
 import Login from "./Login";
-import ViewLinks from "./ViewLinks";
+import ViewLinks, { SortDirection, SortMode } from "./ViewLinks";
 import CryptoJS from "crypto-js";
 import LoadingButton from "@mui/lab/LoadingButton";
 import * as constants from "./constants";
@@ -99,19 +99,16 @@ export type LinkLockerLinkHost = {
 export type LinkLockerActiveAccount = {
     guid: string;
     cipherHash: string;
-    linkList: LinkLockerLinkDir | null;
+    linkDir: LinkLockerLinkDir | null;
 }
 
 //Define the possible states for the four possible rendered components
-// const ORenderedComponent = {
 const RenderedComponent = {
     Loading: 0,
     Login: 1,
     AcctCreate: 2,
     ViewLinks: 3,
 }
-
-// type RenderedComponent = typeof ORenderedComponent[keyof typeof ORenderedComponent];
 
 //Set default theme to dark
 export const darkTheme = createTheme({
@@ -172,9 +169,9 @@ const App = () => {
     //links added and removed from the ViewLinks component are contemporaneously stored in activeAccount.linkList
     const activeAccountReducer = (activeAccount: LinkLockerActiveAccount, action: ActiveAccountReducerAction): any => {
         if (action.type === "updateLinks") {
-            return {...activeAccount, linkList: action.payload.newLinkDir};
+            return {...activeAccount, linkDir: action.payload.newLinkDir};
         } else if (action.type === "login") {
-            return {guid: action.payload.guid, cipherHash: action.payload.cipherHash, linkList: action.payload.linkList} as LinkLockerActiveAccount;
+            return {guid: action.payload.guid, cipherHash: action.payload.cipherHash, linkDir: action.payload.linkDir} as LinkLockerActiveAccount;
         }
     }
 
@@ -275,7 +272,7 @@ const App = () => {
                 updateFailedLogin(false);
                 //Use argon2 to generate the key (config.account[guid].cipherHash) for AES encryption/decryption of linkList
                 argon2.hash({pass: password, salt: userAcct.cipherSalt, type: argon2.ArgonType.Argon2id}).then((res) => {
-                    let linkList: LinkLockerLinkDir | null;
+                    let linkDir: LinkLockerLinkDir | null;
                     try {
                         let plainText;
                         //If cipher already exists in config.account[/guid/], load the string and decrypt it with the generated key
@@ -288,35 +285,30 @@ const App = () => {
                             let linkObject = JSON.parse(plainText, JsonReviver);
                             if (linkObject.links) {
                                 console.error("Old configuration found. Nulling links.");
-                                linkList = null;
+                                linkDir = null;
                             } else if (linkObject.hosts) {
-                                linkList = linkObject as LinkLockerLinkDir;
-                                for (let [hostname, host] of linkList.hosts) {
-                                    for (let link of host.links) {
-                                        if (!link.url) link.url = new URL(link.href)
-                                    }
-                                }
+                                linkDir = linkObject as LinkLockerLinkDir;
                             } else {
-                                linkList = null;
+                                linkDir = null;
                             }
                         } else {
                         //Otherwise, null out the value for a brand-spanking-new linkList
-                            linkList = null;
+                            linkDir = null;
                         }
                     } catch (e) {
-                        linkList = null;
+                        linkDir = null;
                     }
                     
                     //Create and set the newActiveAccount. cipherHash is now in memory and security will be compromised until it is cleared
                     let newActiveAccount: LinkLockerActiveAccount = {
                         guid: guid,
                         cipherHash: res.encoded,
-                        linkList: linkList
+                        linkDir: linkDir
                     };
                     let sessionConfig = JSON.stringify(newActiveAccount, JsonReplacer);
                     browser.runtime.sendMessage({command: "set_active_account", string: sessionConfig});
                     // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount, JsonReplacer));
-                    activeAccountDispatch({type: "login", payload: {guid: newActiveAccount.guid, cipherHash: newActiveAccount.cipherHash, linkList: newActiveAccount.linkList}})
+                    activeAccountDispatch({type: "login", payload: {guid: newActiveAccount.guid, cipherHash: newActiveAccount.cipherHash, linkDir: newActiveAccount.linkDir}})
                 });
                 setIsLoading(false);
             }).catch((err) => {
@@ -331,7 +323,7 @@ const App = () => {
         //Delete the active session
         // window.localStorage.removeItem("sessionConfig");
         browser.runtime.sendMessage(null, {command: "logout"})
-        activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkList: null}})
+        activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkDir: null}})
     }
 
     const deleteAcct = () => {
@@ -347,7 +339,7 @@ const App = () => {
     //Update links in the decrypted activeAccount.linkList variable and also the encrypted config.accounts[activeAccount.guid].cipher variable
     const updateLinks = (linkDir: LinkLockerLinkDir) => {
         let acct = getAcct(activeAccount!.guid);
-        let newActiveAccountObject: LinkLockerActiveAccount = {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: linkDir};
+        let newActiveAccountObject: LinkLockerActiveAccount = {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkDir: linkDir};
         // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject, JsonReplacer));
         browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify(newActiveAccountObject, JsonReplacer)});
         let encrypted = CryptoJS.AES.encrypt(JSON.stringify(linkDir, JsonReplacer), newActiveAccountObject.cipherHash);
@@ -376,7 +368,7 @@ const App = () => {
             browser.runtime.sendMessage(null, {command: "get_active_account"}).then((payload) => {
                 if (payload && payload.string) {
                     let activeAccount = JSON.parse(payload.string, JsonReviver) as LinkLockerActiveAccount;
-                    activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: activeAccount.linkList}})
+                    activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkDir: activeAccount.linkDir}})
                 }
             });
 
@@ -491,7 +483,7 @@ const App = () => {
                         {
                             renderedComponent == RenderedComponent.ViewLinks ?
                             <ViewLinks 
-                                linkDir={activeAccount ? activeAccount!["linkList"] : null} 
+                                linkDir={activeAccount ? activeAccount!["linkDir"] : null} 
                                 updateLinks={updateLinks} 
                                 logout={logout} 
                                 deleteAcct={deleteAcct} 
