@@ -62,10 +62,22 @@ export const enum SortDirection {
     Ascending = "Ascending"
 }
 
+// const useStyles = makeStyles({
+//     button: {
+//         backgroundColor: "primary.main",
+//         color: "primary.contrastText",
+//         '&:hover': {
+//             backgroundColor: "primary.dark",
+//             color: "primary.contrastText"
+//         }
+//     }
+// });
+
 const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm, startSortMode, startSortDirection, startSearchTerm, logout, deleteAcct}: Props) => {
     
     var entryScrollAmount: number = 0;
     var entryScrollInterval: number;
+    var displayedList: LinkLockerLink[] = [];
 
     const addLinkButton: any = createRef();
     const addLinkNameField: any = createRef();
@@ -96,6 +108,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const sortModeMenuOpen = Boolean(sortModeMenuAnchorEl);
     const [acctDeleteDialogOpen, setAcctDeleteDialogOpen] = useState(false);
     const [hostDeleteDialogOpen, setHostDeleteDialogOpen] = useState(false);
+    const [openManyLinksDialog, setOpenManyLinksDialog] = useState(false);
     const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
     const [editLinkModalOpen, setEditLinkModalOpen] = useState(false);
     const [editHostModalOpen, setEditHostModalOpen] = useState(false);
@@ -138,6 +151,14 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
             }
         } else {
             return title;
+        }
+    }
+
+    const openAllLinks = () => {
+        if (displayedList?.length > 0) {
+            for (let link of displayedList) {
+                browser.tabs.create({url: link.href});
+            }
         }
     }
 
@@ -215,7 +236,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
             }
             setLinkName(trimTitle(tabs.at(0)!.title!, url));
             setAddLinkModalOpen(true);
-        }).catch((err) => {console.debug(err)});
+        }).catch((err) => {console.error(err)});
     }    
 
     const openEditLinkDialog = (link: LinkLockerLink) => {
@@ -257,7 +278,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
                 updateLinks(linkDir!);
             } else {
             }
-        }).catch((err) => {console.debug(err)});
+        }).catch((err) => {console.error(err)});
     }
 
     const editLink = (guid: string, url: URL, name: string, favicon: string, tags: Array<string>) => {
@@ -485,6 +506,9 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
         }
 
         const renderGroupByHost = (linkHosts: LinkLockerLinkHost[]) => {
+            if (linkDir) {
+                displayedList = resultsFromHosts(linkHosts);
+            }
             return (linkHosts.map((host, index) => {
                     return (
                         <Stack direction="column" sx={{
@@ -591,6 +615,9 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
         }
 
         const renderGroupByDate = (links: LinkLockerLinkResult[]) => {
+            if (linkDir) {
+                displayedList = links;
+            }
             let dateCount = new Date(0);
 
             return (links.map((link, i) => {
@@ -609,6 +636,9 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
         }
 
         const renderFlat = (links: LinkLockerLinkResult[]) => {
+            if (linkDir) {
+                displayedList = links;
+            }
             return (links.map((link) => {
                 return (
                     getLinkEntry(link, link.favicon)
@@ -1022,6 +1052,32 @@ return (
                 ref={linkDisplayBox}
             >
                 {buildListSorted()}
+                {
+                    displayedList.length > 0 ?
+                    <Button 
+                        size="small"
+                        sx={{
+                            bgcolor: "primary.main",
+                            color: "primary.contrastText",
+                            mt: "1rem",
+                            '&:hover': {
+                                backgroundColor: "primary.dark",
+                                color: "primary.contrastText"
+                            }
+                        }}
+                        onClick={(e) => {
+                            if (displayedList?.length <= constants.MAX_NUM_TAB_OPENS) { 
+                                openAllLinks();
+                            } else {
+                                setOpenManyLinksDialog(true);
+                            }
+                        }}
+                    >
+                        Open {displayedList?.length} link{displayedList?.length != 1 ? "s" : ""} in tabs
+                    </Button> 
+                    :
+                    null
+                }
             </Box>
             <Box flexGrow={1} />
             <Stack spacing={1} sx={{mt: 2}} direction="row" alignItems="center">
@@ -1033,7 +1089,6 @@ return (
                     }}
                     size="small"
                     color="primary"
-                    // tabIndex={1}
                 >
                     <AddIcon />
                     <Box sx={{pr: 1}}>
@@ -1089,11 +1144,6 @@ return (
                                 key="add_debug_links"
                                 divider
                                 onClick={() => {
-                                    // let debugList: LinkLockerLinkDir = JSON.parse(JSON.stringify(__DEBUG_LIST__, JsonReplacer), JsonReviver);
-                                    let urlObject = {url: new URL("https://cnn.com")};
-                                    let urlJson = JSON.stringify(urlObject, JsonReplacer);
-                                    let {url: newUrl} = JSON.parse(urlJson, JsonReviver);
-                                    console.warn(newUrl);
                                     let debugList: LinkLockerLinkDir = JSON.parse(__DEBUG_LIST__, JsonReviver);
                                     for (let [hostname, host] of debugList.hosts) {
                                         for (let link of host.links) {
@@ -1138,7 +1188,7 @@ return (
                         document.body.removeChild(link);
                         window.setTimeout(() => {window.close()}, 100);
                     }}
-                    >Download Backup...</MenuItem>
+                    >Export Links as JSON...</MenuItem>
                     <MenuItem dense key="logout" onClick={logout} selected>Logout</MenuItem>
                 </Menu>
             </Stack>
@@ -1518,6 +1568,19 @@ return (
             <DialogActions>
                 <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
                 <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false); deleteHost()}} sx={{color: 'error.main'}}>DELETE</Button>
+            </DialogActions>
+        </Dialog>
+        <Dialog 
+            open={openManyLinksDialog}
+            >
+            <DialogTitle>Open {displayedList.length} tab{displayedList.length > 1 ? "s" : ""}?</DialogTitle>
+            <DialogContent sx={{overflow: "hidden"}}>
+                <DialogContentText fontSize="1rem">Are you sure you want to open {displayedList?.length} tab{displayedList.length > 1 ? "s" : ""}?</DialogContentText>
+                <DialogContentText fontSize="1rem">This may slow down your browser.</DialogContentText>
+            </DialogContent>
+            <DialogActions>
+                <Button size="small" onClick={(e) => {setOpenManyLinksDialog(false)}} autoFocus>Go Back</Button>
+                <Button size="small" onClick={(e) => {setOpenManyLinksDialog(false); openAllLinks()}}>Open</Button>
             </DialogActions>
         </Dialog>
     </Box>

@@ -11,7 +11,7 @@
 - [x] Change entry dynamic buttons from opacity to display to allow for more width for link display when not hovering
 - [x] Add json download option
 - [x] Change \__DEBUG_LIST__ to make timestamps randomized across several weeks
-- [ ] Open all links button at bottom of screen (warning if over MAX_NUM_TAB_OPENS)
+- [x] Open all links button at bottom of screen (warning if over MAX_NUM_TAB_OPENS)
 - [ ] Crash webpack if NODE_ENV and BROWSER_ENV are not set
 - [ ] Add ./build/firefox/, ./build/chromium, ./dist/firefox, ./dist/chromium
 
@@ -29,8 +29,10 @@
 - [x] Change LinkLockerLink.href from string to URL (added LinkLockerLink.url instead)
 - [x] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:' (excluded 'name:')
 - [x] Add sort options 
-- [ ] Add ability to change account password
 - [ ] Add JSON text entry for bookmark import
+- [ ] Add ability to change account password
+- [ ] Add option download full, encrypted, account backup. 
+- [ ] Add login screen option to import encrypted account backups.
 - [ ] Add memoization
 - [ ] Add omnibox functionality
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)
