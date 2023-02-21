@@ -14,6 +14,7 @@
 - [x] Open all links button at bottom of screen (warning if over MAX_NUM_TAB_OPENS)
 - [ ] Crash webpack if NODE_ENV and BROWSER_ENV are not set
 - [ ] Add ./build/firefox/, ./build/chromium, ./dist/firefox, ./dist/chromium
+- [ ] Eliminate extraneous whitespace in modals and dialogs
 
 ## Major tasks
 - [x] Implement link editing and implement edit icon
@@ -32,7 +33,7 @@
 - [ ] Add JSON text entry for bookmark import
 - [ ] Add ability to change account password
 - [ ] Add option download full, encrypted, account backup. 
-- [ ] Add login screen option to import encrypted account backups.
+- [ ] Add login screen menu modal with ooption to import encrypted account backups and change themes
 - [ ] Add memoization
 - [ ] Add omnibox functionality
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)

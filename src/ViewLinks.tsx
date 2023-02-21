@@ -1029,13 +1029,13 @@ return (
                     ref={sortModeMenu}
                     defaultValue={sortMode}
                 >
-                    <MenuItem dense key={SortMode.AlphabeticalByHost} 
+                    <MenuItem dense selected={sortMode === SortMode.AlphabeticalByHost} key={SortMode.AlphabeticalByHost} 
                         onClick={() => {setSortMode(SortMode.AlphabeticalByHost); updateSort(SortMode.AlphabeticalByHost, sortDirection); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Host</MenuItem>
-                    <MenuItem dense key={SortMode.AlphabeticalByName} 
+                    <MenuItem dense selected={sortMode === SortMode.AlphabeticalByName} key={SortMode.AlphabeticalByName} 
                         onClick={() => {setSortMode(SortMode.AlphabeticalByName); updateSort(SortMode.AlphabeticalByName, sortDirection); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Name</MenuItem>
-                    <MenuItem dense key={SortMode.Timestamp}
+                    <MenuItem dense selected={sortMode === SortMode.Timestamp} key={SortMode.Timestamp}
                         onClick={() => {setSortMode(SortMode.Timestamp); updateSort(SortMode.Timestamp, sortDirection); setSortModeMenuAnchorEl(null); linkDisplayBox.current.scrollTo(0,0)}}
                     >Date</MenuItem>
                 </Menu>
@@ -1188,7 +1188,7 @@ return (
                         document.body.removeChild(link);
                         window.setTimeout(() => {window.close()}, 100);
                     }}
-                    >Export Links as JSON...</MenuItem>
+                    >Export Links</MenuItem>
                     <MenuItem dense key="logout" onClick={logout} selected>Logout</MenuItem>
                 </Menu>
             </Stack>
