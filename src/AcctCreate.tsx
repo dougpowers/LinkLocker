@@ -24,9 +24,9 @@ const AcctCreate = forwardRef((
     },
     }))
 
-    let [guid, updateGuid] = useState(uuidv4());
-    let [passwordValue, updatePasswordValue] = useState('');
-    let [errorState, updateErrorState] = useState(false);
+    let [guid, setGuid] = useState(uuidv4());
+    let [passwordValue, setPasswordValue] = useState('');
+    let [errorState, setErrorState] = useState(false);
 
     const handleKeyPress = (e: KeyboardEvent) => {
         if ((e.target as HTMLElement).id == "username" && e.key == "Enter") {
@@ -34,8 +34,8 @@ const AcctCreate = forwardRef((
         }
         if ((e.target as HTMLElement).id == "password") {
             passwordValue = passwordInput.current.value;
-            updatePasswordValue(passwordInput.current.value);
-            if (passwordValue.length > 0) updateErrorState(false);
+            setPasswordValue(passwordInput.current.value);
+            if (passwordValue.length > 0) setErrorState(false);
             if (e.key == "Enter") {
                 submitButton.current.focus();
                 submitButton.current.click();
@@ -51,7 +51,7 @@ const AcctCreate = forwardRef((
         if (passwordValue.length > 0) {
             addAcct(usernameInput.current.value, passwordInput.current.value, guid);
         } else {
-            updateErrorState(true);
+            setErrorState(true);
             passwordInput.current.focus();
         }
     }

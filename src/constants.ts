@@ -8,7 +8,7 @@ export const MAIN_MIN_WIDTH = '310px';
 export const MAIN_MAX_WIDTH = '420px';
 export const INNER_MIN_WIDTH = '350px';
 export const INNER_MAX_WIDTH = '350px';
-export const INNER_MIN_HEIGHT = '220px';
+export const INNER_MIN_HEIGHT = '240px';
 export const LINK_ENTRY_MAX_WIDTH = '21rem';
 let scrollerHeight: string;
 if (__IN_DEBUG__) {

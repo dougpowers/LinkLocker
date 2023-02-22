@@ -43,8 +43,10 @@ type Props = {
     startSortMode: SortMode,
     startSortDirection: SortDirection,
     startSearchTerm: string,
-    logout: () => void;
-    deleteAcct: () => void;
+    logout: () => void,
+    deleteAcct: () => void,
+    changePassword: (oldPassword: string, newPassword: string) => void,
+    errorState: ErrorStateProp,
 }
 
 interface LinkLockerLinkResult extends LinkLockerLink {
@@ -62,18 +64,19 @@ export const enum SortDirection {
     Ascending = "Ascending"
 }
 
-// const useStyles = makeStyles({
-//     button: {
-//         backgroundColor: "primary.main",
-//         color: "primary.contrastText",
-//         '&:hover': {
-//             backgroundColor: "primary.dark",
-//             color: "primary.contrastText"
-//         }
-//     }
-// });
+export const enum ErrorStateProp {
+    None = 0,
+    DeleteAcctPasswordError = 1 << 0,
+    ChangeAcctPasswordError = 1 << 1,
+}
 
-const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm, startSortMode, startSortDirection, startSearchTerm, logout, deleteAcct}: Props) => {
+export const enum ChangePasswordErrorState {
+    None,
+    PasswordMismatch,
+    InvalidPassword,
+}
+
+const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm, startSortMode, startSortDirection, startSearchTerm, logout, deleteAcct, changePassword, errorState}: Props) => {
     
     var entryScrollAmount: number = 0;
     var entryScrollInterval: number;
@@ -94,6 +97,13 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const editHostModalDeleteButton: any = createRef();
     const editHostModalCancelButton: any = createRef();
     const linkDisplayBox: any = createRef();
+    const passwordChangeOldPasswordField: any = createRef();
+    const passwordChangeOldPasswordInput: any = createRef();
+    const passwordChangeNewPasswordField: any = createRef();
+    const passwordChangeNewPasswordInput: any = createRef();
+    const passwordChangeNewPasswordConfirmField: any = createRef();
+    const passwordChangeNewPasswordConfirmInput: any = createRef();
+    const passwordChangeSubmitButton: any = createRef();
     const searchField: any = createRef();
     const sortModeMenu: any = createRef();
     const sortModeSelector: any = createRef();
@@ -110,6 +120,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const [hostDeleteDialogOpen, setHostDeleteDialogOpen] = useState(false);
     const [openManyLinksDialog, setOpenManyLinksDialog] = useState(false);
     const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
+    const [confirmPasswordError, setConfirmPasswordError] = useState<ChangePasswordErrorState>(ChangePasswordErrorState.None);
     const [editLinkModalOpen, setEditLinkModalOpen] = useState(false);
     const [editHostModalOpen, setEditHostModalOpen] = useState(false);
     const [jsonDumpOpen, setJsonDumpOpen] = useState(false);
@@ -119,6 +130,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const [linkName, setLinkName] = useState("");
     const [linkTags, setLinkTags] = useState("");
     const [host, setHost] = useState<null | LinkLockerLinkHost>(null);
+    const [passwordChangeModalOpen, setPasswordChangeModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(startSearchTerm);
     const [sortMode, setSortMode] = useState<SortMode>(startSortMode);
     const [sortDirection, setSortDirection] = useState<SortDirection>(startSortDirection);
@@ -903,42 +915,6 @@ return (
             }
         }}
     >
-        { __IN_DEBUG__ ?
-            <Modal
-                open={jsonDumpOpen}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                        setJsonDumpOpen(false);
-                    }
-                }}
-            >
-                <Box
-                    sx={{
-                        margin: "1rem",
-                        border: "1",
-                        borderRadius: "1",
-                        borderColor: "primary.main",
-                        backgroundColor: "rgba(0,0,0,255)"
-                    }}
-                >
-                    <TextField
-                        multiline
-                        onFocus={(e) => {e.currentTarget.select()}}
-                        defaultValue={
-                            JSON.stringify(linkDir, JsonReplacer)
-                        }
-                        sx={{
-                            height: "100%",
-                            width: "100%"
-                        }}
-                        size="small"
-                        maxRows={12}
-                    />
-                </Box>
-            </Modal>
-            :
-            null
-        }
         <Stack 
             spacing={0} 
             minHeight={constants.INNER_MIN_HEIGHT} 
@@ -1164,12 +1140,23 @@ return (
                         key="delete" 
                         dense
                         divider 
-                        onClick={() => {setAcctDeleteDialogOpen(true)}} 
+                        onClick={() => {setAcctDeleteDialogOpen(true); handleHamburgerClose();}} 
                         sx={{
                             color: "error.main",
                         }}
                     >
                         Delete Account...
+                    </MenuItem>
+                    <MenuItem  
+                        key="change" 
+                        dense
+                        divider 
+                        onClick={() => {setPasswordChangeModalOpen(true); handleHamburgerClose();}} 
+                        sx={{
+                            color: "error.main",
+                        }}
+                    >
+                        Change Password...
                     </MenuItem>
                     <MenuItem dense key="download_backup" onClick={() => {
                         let link = document.createElement("a");
@@ -1501,6 +1488,109 @@ return (
                 </Stack>
             </Box>
         </Modal>
+        <Modal
+            open={passwordChangeModalOpen}
+            disableAutoFocus={true}
+            sx={{
+                margin: "auto",
+                maxHeight: "fit-content",
+            }}
+        >
+            <Box
+                maxWidth="80%"
+                marginTop="20px"
+                marginLeft="auto"
+                marginRight="auto"
+                maxHeight="fit-content"
+                bgcolor="background.paper"
+                padding="10px"
+                border={1}
+                borderRadius={1}
+                borderColor="primary.main"
+                display="flex"
+                flexDirection="column"
+            >
+                <Stack direction="column" spacing={1}>
+                    <Typography
+                        variant="h6"
+                    >
+                        Change Password
+                    </Typography> 
+                    <TextField
+                        variant="outlined"
+                        inputProps={{type: "password"}}
+                        size="small"
+                        label="Old Password"
+                        autoFocus={passwordChangeModalOpen || (ErrorStateProp.ChangeAcctPasswordError === (errorState & ErrorStateProp.ChangeAcctPasswordError))}
+                        ref={passwordChangeOldPasswordField}
+                        inputRef={passwordChangeOldPasswordInput}
+                        error={
+                            ErrorStateProp.ChangeAcctPasswordError === (errorState & ErrorStateProp.ChangeAcctPasswordError)
+                        }
+                        helperText={
+                            ErrorStateProp.ChangeAcctPasswordError === (errorState & ErrorStateProp.ChangeAcctPasswordError) ?
+                            "Password Incorrect"
+                            :
+                            null
+                        }
+                    >
+                    </TextField>
+                    <TextField
+                        variant="outlined"
+                        inputProps={{type: "password"}}
+                        size="small"
+                        label="New Password"
+                        ref={passwordChangeNewPasswordField}
+                        inputRef={passwordChangeNewPasswordInput}
+                    >
+                    </TextField>
+                    <TextField
+                        variant="outlined"
+                        inputProps={{type: "password"}}
+                        size="small"
+                        label="Confirm New Password"
+                        error={confirmPasswordError !== ChangePasswordErrorState.None}
+                        ref={passwordChangeNewPasswordConfirmField}
+                        inputRef={passwordChangeNewPasswordConfirmInput}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                passwordChangeSubmitButton.current.click();
+                            }
+                        }}
+                        helperText={
+                            confirmPasswordError !== ChangePasswordErrorState.None ?
+                                confirmPasswordError === ChangePasswordErrorState.PasswordMismatch ?
+                                    "Passwords Don't Match"
+                                    :
+                                    "Invalid Password"
+                            :
+                            null
+                        }
+                    >
+                    </TextField>
+                    <Stack direction="row" spacing={2} marginTop="10px">
+                        <Button 
+                        variant="contained" 
+                        ref={passwordChangeSubmitButton}
+                        size="small" 
+                        onClick={() => {
+                            if (passwordChangeNewPasswordInput.current.value !== passwordChangeNewPasswordConfirmInput.current.value) {
+                                setConfirmPasswordError(ChangePasswordErrorState.PasswordMismatch);
+                            } else if (passwordChangeNewPasswordInput.current.value.length === 0 ) {
+                                setConfirmPasswordError(ChangePasswordErrorState.InvalidPassword);
+                            } else {
+                                setConfirmPasswordError(ChangePasswordErrorState.None);
+                                changePassword(passwordChangeOldPasswordInput.current.value, passwordChangeNewPasswordInput.current.value);
+                            }
+                        }}>
+                            Change and Logout
+                        </Button>
+                        <Box flexGrow={1} />
+                        <Button variant="contained" size="small" ref={editHostModalCancelButton} onClick={() => {setPasswordChangeModalOpen(false)}}>Cancel</Button>
+                    </Stack>
+                </Stack>
+            </Box>
+        </Modal>
         <Popover
             id="entry-popover"
             anchorEl={linkPopoverAnchorEl}
@@ -1583,6 +1673,42 @@ return (
                 <Button size="small" onClick={(e) => {setOpenManyLinksDialog(false); openAllLinks()}}>Open</Button>
             </DialogActions>
         </Dialog>
+        { __IN_DEBUG__ ?
+            <Modal
+                open={jsonDumpOpen}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                        setJsonDumpOpen(false);
+                    }
+                }}
+            >
+                <Box
+                    sx={{
+                        margin: "1rem",
+                        border: "1",
+                        borderRadius: "1",
+                        borderColor: "primary.main",
+                        backgroundColor: "rgba(0,0,0,255)"
+                    }}
+                >
+                    <TextField
+                        multiline
+                        onFocus={(e) => {e.currentTarget.select()}}
+                        defaultValue={
+                            JSON.stringify(linkDir, JsonReplacer)
+                        }
+                        sx={{
+                            height: "100%",
+                            width: "100%"
+                        }}
+                        size="small"
+                        maxRows={12}
+                    />
+                </Box>
+            </Modal>
+            :
+            null
+        }
     </Box>
 );}
 

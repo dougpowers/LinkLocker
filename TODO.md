@@ -30,10 +30,12 @@
 - [x] Change LinkLockerLink.href from string to URL (added LinkLockerLink.url instead)
 - [x] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:' (excluded 'name:')
 - [x] Add sort options 
+- [x] Add ability to change account password
+- [ ] Add persistent sort to accounts
+- [ ] Add password entry requirement for account delete
 - [ ] Add JSON text entry for bookmark import
-- [ ] Add ability to change account password
 - [ ] Add option download full, encrypted, account backup. 
-- [ ] Add login screen menu modal with ooption to import encrypted account backups and change themes
+- [ ] Add login screen menu modal with option to import encrypted account backups and change themes
 - [ ] Add memoization
 - [ ] Add omnibox functionality
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)

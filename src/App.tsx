@@ -9,7 +9,7 @@ import * as browser from "webextension-polyfill";
 import argon2 from "argon2-browser";
 import AcctCreate from "./AcctCreate";
 import Login from "./Login";
-import ViewLinks, { SortDirection, SortMode } from "./ViewLinks";
+import ViewLinks, { ErrorStateProp, SortDirection, SortMode } from "./ViewLinks";
 import CryptoJS from "crypto-js";
 import LoadingButton from "@mui/lab/LoadingButton";
 import * as constants from "./constants";
@@ -44,6 +44,16 @@ type ConfigReducerAction =
             guid: string,
         }
     }
+    | {
+        type: "updateAcct";
+        payload: {
+            guid: string,
+            authSalt: string,
+            authHash: string,
+            cipherSalt: string,
+            cipher: LinkLockerCipherParams,
+        }
+    }
 
 type ActiveAccountReducerAction = 
     | {
@@ -65,9 +75,11 @@ type ActiveAccountReducerAction =
     }
     | {
         type: "updateSearchTerm";
-        payload: {
-            searchTerm: string,
-        }
+        payload: string,
+    }
+    | {
+        type: "updateErrorState";
+        payload: ErrorStateProp,
     }
 
 interface LinkLockerConfig {
@@ -86,7 +98,7 @@ interface LinkLockerAcct {
 interface LinkLockerCipherParams {
     ct: string;
     iv?: string;
-    s?: string;
+    salt?: string;
 };
 
 export interface LinkLockerLink {
@@ -116,6 +128,7 @@ export type LinkLockerActiveAccount = {
     sortMode: SortMode,
     sortDirection: SortDirection,
     searchTerm: string,
+    errorState: ErrorStateProp,
 }
 
 //Define the possible states for the four possible rendered components
@@ -192,8 +205,12 @@ const App = () => {
             return action.payload;
         } else if (action.type === "updateSort") {
             return {...activeAccount, sortMode: action.payload.sortMode, sortDirection: action.payload.sortDirection};
+        } else if (action.type === "updateSearchTerm") {
+            return {...activeAccount, searchTerm: action.payload};
+        } else if (action.type === "updateErrorState") {
+            return {...activeAccount, errorState: action.payload};
         } else {
-            return {...activeAccount, searchTerm: action.payload.searchTerm};
+            return activeAccount;
         }
     }
 
@@ -216,6 +233,17 @@ const App = () => {
                 }) 
                 browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
                 return {...config, accounts: updatedAcctList};
+            case "updateAcct":
+                updatedAcctList.forEach((v) => {
+                    if (v.guid === action.payload.guid) {
+                        v.authHash = action.payload.authHash;
+                        v.authSalt = action.payload.authSalt;
+                        v.cipherSalt = action.payload.cipherSalt;
+                        v.cipher = action.payload.cipher;
+                    }
+                })
+                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
+                return {...config, accounts: updatedAcctList};
             case "removeAcct":
                 updatedAcctList.splice(updatedAcctList.findIndex((a: LinkLockerAcct) => {if (a.guid == action.payload.guid) return}), 1);
                 browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
@@ -227,7 +255,7 @@ const App = () => {
     // in empty config in getConfigsFromStorage function should the storedConfig actually be empty.
     const [config, configDispatch] = useReducer(configReducer, {accounts: new Array()}); 
     const [renderedComponent, updateRenderedComponent] = useState(RenderedComponent.Loading);
-    const [activeAccount, activeAccountDispatch] = useReducer(activeAccountReducer, {guid: "", cipherHash: "", linkDir: null, sortMode: SortMode.AlphabeticalByHost, sortDirection: SortDirection.Descending, searchTerm: ""});
+    const [activeAccount, activeAccountDispatch] = useReducer(activeAccountReducer, {guid: "", cipherHash: "", linkDir: null, sortMode: SortMode.AlphabeticalByHost, sortDirection: SortDirection.Descending, searchTerm: "", errorState: ErrorStateProp.None});
     //Global state that the last login failed. Used by Login component to put the passwordInput into fail style.
     const [failedLogin, updateFailedLogin] = useState(false);
     const [addingNewAcct, updateAddingNewAcct] = useState(false);
@@ -259,7 +287,7 @@ const App = () => {
 
             //Generate both salts
             let authSalt = makeSalt(constants.SALT_LENGTH);
-            let cypherSalt = makeSalt(constants.SALT_LENGTH);
+            let cipherSalt = makeSalt(constants.SALT_LENGTH);
 
             //Execute async function
             computeHashes(authSalt, password).then((authHash) => {
@@ -268,13 +296,50 @@ const App = () => {
                     guid: guid,
                     authSalt: authSalt,
                     authHash: authHash,
-                    cipherSalt: cypherSalt,
+                    cipherSalt: cipherSalt,
                 }
                 configDispatch({type: "newAcct", payload: {newAcct: newAcct}});
                 updateAddingNewAcct(false);
             });
         } else {
             new Error("Attempted to create an account with a duplicate GUID. App has entered an invalid state or something astronomically unlikely has happened. Please consult developer or statistician as appropriate.");
+        }
+    }
+
+    const changeActiveAccountPassword = (oldPassword: string, newPassword: string) => {
+
+        const generateNewEncryption = async (password: string, authSalt: string, cipherSalt:string, linkDir: LinkLockerLinkDir) => {
+            let authHash = await (await argon2.hash({pass: password, salt: authSalt, type: argon2.ArgonType.Argon2id})).encoded;
+            let cipherHash = await (await argon2.hash({pass: password, salt: cipherSalt, type: argon2.ArgonType.Argon2id})).encoded;
+            let cipher = CryptoJS.AES.encrypt(JSON.stringify(linkDir, JsonReplacer), cipherHash);
+            let cipherParams: LinkLockerCipherParams = {
+                ct: cipher.ciphertext.toString(CryptoJS.enc.Base64),
+                iv: cipher.iv.toString(CryptoJS.enc.Hex),
+                salt: cipher.salt.toString(CryptoJS.enc.Hex),
+            }
+            return {
+                authSalt: authSalt,
+                authHash: authHash,
+                cipherSalt: cipherSalt,
+                cipher: cipherParams,
+            }
+        }
+
+        if (activeAccount.guid !== "") {
+            let userAcct = getAcct(activeAccount.guid);
+
+            argon2.verify({pass: oldPassword, encoded: userAcct.authHash}).then((res) => {
+                let authSalt = makeSalt(constants.SALT_LENGTH);
+                let cipherSalt = makeSalt(constants.SALT_LENGTH);
+
+                generateNewEncryption(newPassword, authSalt, cipherSalt, activeAccount.linkDir!).then((res) => {
+                    configDispatch({type: "updateAcct", payload: {...res, guid: activeAccount.guid}});
+                    logout();
+                });
+
+            }).catch((e) => {
+                activeAccountDispatch({type: "updateErrorState", payload: activeAccount.errorState | ErrorStateProp.ChangeAcctPasswordError});
+            })
         }
     }
 
@@ -289,7 +354,7 @@ const App = () => {
 
         if (userAcct) {
             //Verify password against the hash. NOTE: userAcct.authHash is a full MCF string that already contains the salt
-            argon2.verify({pass: password, encoded: userAcct.authHash}).then((res) => {
+            argon2.verify({pass: password, encoded: userAcct.authHash}).then(() => {
                 //Ensure that a previous failed login is no longer error-styling the password input
                 updateFailedLogin(false);
                 //Use argon2 to generate the key (config.account[guid].cipherHash) for AES encryption/decryption of linkList
@@ -302,7 +367,7 @@ const App = () => {
                             //Create a new CryptoJS CipherParams based on the saved ct, iv, and salt from config.accounts[guid].cipher
                             let CP = CryptoJS.lib.CipherParams.create({ciphertext: CryptoJS.enc.Base64.parse(userAcct.cipher.ct)});
                             if (userAcct.cipher.iv) { CP.iv = CryptoJS.enc.Hex.parse(userAcct.cipher.iv); }
-                            if (userAcct.cipher.s) { CP.salt = CryptoJS.enc.Hex.parse(userAcct.cipher.s); }
+                            if (userAcct.cipher.salt) { CP.salt = CryptoJS.enc.Hex.parse(userAcct.cipher.salt); }
                             plainText = CryptoJS.AES.decrypt(CP, res.encoded).toString(CryptoJS.enc.Utf8);
                             let linkObject = JSON.parse(plainText, JsonReviver);
                             if (linkObject.links) {
@@ -329,6 +394,7 @@ const App = () => {
                         sortMode: SortMode.AlphabeticalByHost,
                         sortDirection: SortDirection.Descending,
                         searchTerm: "",
+                        errorState: ErrorStateProp.None,
                     };
                     let sessionConfig = JSON.stringify(newActiveAccount, JsonReplacer);
                     browser.runtime.sendMessage({command: "set_active_account", string: sessionConfig});
@@ -348,7 +414,7 @@ const App = () => {
         //Delete the active session
         // window.localStorage.removeItem("sessionConfig");
         browser.runtime.sendMessage(null, {command: "logout"})
-        activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkDir: null, sortMode: SortMode.AlphabeticalByHost, sortDirection: SortDirection.Descending, searchTerm: ""}})
+        activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkDir: null, sortMode: SortMode.AlphabeticalByHost, sortDirection: SortDirection.Descending, searchTerm: "", errorState: ErrorStateProp.None}})
     }
 
     const deleteAcct = () => {
@@ -366,11 +432,6 @@ const App = () => {
         let acct = getAcct(activeAccount!.guid);
         let newActiveAccountObject: LinkLockerActiveAccount = {...activeAccount, linkDir: linkDir};
         // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccountObject, JsonReplacer));
-        for (let [hostname, host] of linkDir.hosts) {
-            for (let link of host.links) {
-                console.debug(link.url);
-            }
-        }
         browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify(newActiveAccountObject, JsonReplacer)});
         activeAccountDispatch({type: "updateLinks", payload: {newLinkDir: linkDir}})
 
@@ -378,8 +439,8 @@ const App = () => {
         //Create serializable LinkLockerBasicCipherParams from the fresh CryptoJS CipherParams
         acct.cipher = {
             ct: encrypted.ciphertext.toString(CryptoJS.enc.Base64),
-            iv: encrypted.iv.toString(),
-            s: encrypted.salt.toString()
+            iv: encrypted.iv.toString(CryptoJS.enc.Hex),
+            salt: encrypted.salt.toString(CryptoJS.enc.Hex)
         }
         configDispatch({type: "newCipher", payload: {guid: acct.guid, newCipher: acct.cipher}})
     }
@@ -391,7 +452,7 @@ const App = () => {
 
     const updateSearchTerm = (searchTerm: string) => {
         browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify({...activeAccount, searchTerm}, JsonReplacer)});
-        activeAccountDispatch({type: "updateSearchTerm", payload: {searchTerm}})
+        activeAccountDispatch({type: "updateSearchTerm", payload: searchTerm})
     }
 
     //Async function ran on every popup open to get the "config" key from local extension storage and prime the app state
@@ -413,18 +474,6 @@ const App = () => {
                 }
             });
 
-            // if (sessionConfigString) {
-            //     //Parse session into activeAccount, dispatch, and do nothing else
-            //     // let activeAccount = JSON.parse(sessionConfigString, JsonReviver) as LinkLockerActiveAccount;
-            //     // activeAccountDispatch({type: "login", payload: {guid: activeAccount.guid, cipherHash: activeAccount.cipherHash, linkList: activeAccount.linkList}})
-            //     // return;
-            // } else if (loadedConfig.accounts.length > 0) {
-            //     // setIsLoading(false);
-            //     return;
-            // } else {
-            //     // setIsLoading(false);
-            //     return;
-            // }
         } else {
             //First time running the extension
             //Generate new config with empty accounts array
@@ -530,9 +579,11 @@ const App = () => {
                                 updateSearchTerm={updateSearchTerm}
                                 logout={logout} 
                                 deleteAcct={deleteAcct} 
+                                changePassword={changeActiveAccountPassword}
                                 startSortMode={activeAccount.sortMode}
                                 startSortDirection={activeAccount.sortDirection}
                                 startSearchTerm={activeAccount.searchTerm}
+                                errorState={activeAccount.errorState}
                             />
                             :
                             null
