@@ -96,6 +96,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const editHostModalAddButton: any = createRef();
     const editHostModalDeleteButton: any = createRef();
     const editHostModalCancelButton: any = createRef();
+    const jsonImportInput: any = createRef();
     const linkDisplayBox: any = createRef();
     const passwordChangeOldPasswordField: any = createRef();
     const passwordChangeOldPasswordInput: any = createRef();
@@ -124,6 +125,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const [editLinkModalOpen, setEditLinkModalOpen] = useState(false);
     const [editHostModalOpen, setEditHostModalOpen] = useState(false);
     const [jsonDumpOpen, setJsonDumpOpen] = useState(false);
+    const [jsonImportModalOpen, setJsonImportModalOpen] = useState(false);
     const [linkGuid, setLinkGuid] = useState("");
     const [linkFaviconUrl, setLinkFaviconUrl] = useState("");
     const [linkUrl, setLinkUrl] = useState<null | URL>(null);
@@ -1158,6 +1160,13 @@ return (
                     >
                         Change Password...
                     </MenuItem>
+                    <MenuItem
+                        dense
+                        key="import_json"
+                        onClick={() => {
+                            setJsonImportModalOpen(true);
+                        }}
+                    >Load JSON...</MenuItem>
                     <MenuItem dense key="download_backup" onClick={() => {
                         let link = document.createElement("a");
                         let date = new Date()
@@ -1171,9 +1180,11 @@ return (
                         link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer, 4)}`
                         link.style.display = "none";
                         document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        window.setTimeout(() => {window.close()}, 100);
+                        window.setTimeout(() => {
+                            link.click();
+                            document.body.removeChild(link);
+                            window.setTimeout(() => {window.close()}, 100);
+                        }, 200)
                     }}
                     >Export Links</MenuItem>
                     <MenuItem dense key="logout" onClick={logout} selected>Logout</MenuItem>
@@ -1673,6 +1684,50 @@ return (
                 <Button size="small" onClick={(e) => {setOpenManyLinksDialog(false); openAllLinks()}}>Open</Button>
             </DialogActions>
         </Dialog>
+        <Modal
+            open={jsonImportModalOpen}
+        >
+            <Box
+                sx={{
+                    margin: "1rem",
+                    border: "1",
+                    borderRadius: "1",
+                    borderColor: "primary.main",
+                    backgroundColor: "rgba(0,0,0,255)"
+                }}
+            >
+                <Stack direction="column">
+                <TextField
+                    multiline
+                    inputRef={jsonImportInput}
+                    onFocus={(e) => {e.currentTarget.select()}}
+                    sx={{
+                        height: "100%",
+                        width: "100%"
+                    }}
+                    size="small"
+                    maxRows={10}
+                />
+                <Stack direction="row">
+                    <Button
+                        onClick={() => {
+                            let importedDir: LinkLockerLinkDir = JSON.parse(jsonImportInput.current.value, JsonReviver);
+                            for (let [hostname, host] of importedDir.hosts) {
+                                for (let link of host.links) {
+                                    addLink(link.url, link.name, host.favicon, link.tags, host.tags!);
+                                }
+                            }
+                            setJsonImportModalOpen(false);
+                        }} 
+                    >
+                        Import
+                    </Button>
+                    <Box flexGrow={1}/>
+                    <Button onClick={() => {setJsonImportModalOpen(false);}}>Cancel</Button>
+                </Stack>
+                </Stack>
+            </Box>
+        </Modal>
         { __IN_DEBUG__ ?
             <Modal
                 open={jsonDumpOpen}
