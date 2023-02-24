@@ -1,4 +1,5 @@
-## Minor tasks
+## Current Changes
+### Minor tasks
 - [x] Sort hosts by domain name in renderGroupByHost
 - [x] Find " | (domain)" or " - (domain)" at end of window titles and snip for Add Link dialog
 - [x] Change 'title' references to 'name'
@@ -12,11 +13,8 @@
 - [x] Add json download option
 - [x] Change \__DEBUG_LIST__ to make timestamps randomized across several weeks
 - [x] Open all links button at bottom of screen (warning if over MAX_NUM_TAB_OPENS)
-- [ ] Crash webpack if NODE_ENV and BROWSER_ENV are not set
-- [ ] Add ./build/firefox/, ./build/chromium, ./dist/firefox, ./dist/chromium
-- [ ] Eliminate extraneous whitespace in modals and dialogs
 
-## Major tasks
+### Major tasks
 - [x] Implement link editing and implement edit icon
 - [x] Implement info popover for entries and implement "i" entry icon 
 - [x] Implement entry scrolling
@@ -31,11 +29,20 @@
 - [x] Add search operators like 'site:'/'host:', 'tag:', and 'name:'/'title:' (excluded 'name:')
 - [x] Add sort options 
 - [x] Add ability to change account password
-- [ ] Add persistent sort to accounts
+- [x] Add persistent sort to accounts
+- [x] Add JSON text entry for bookmark import
+- [x] Process favicons for compression
 - [ ] Add password entry requirement for account delete
-- [ ] Add JSON text entry for bookmark import
 - [ ] Add option download full, encrypted, account backup. 
-- [ ] Add login screen menu modal with option to import encrypted account backups and change themes
-- [ ] Add memoization
-- [ ] Add omnibox functionality
+- [ ] Add login and account create screen menu modal with option to import encrypted account backups
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)
+
+## Delayed Changes
+### Minor tasks
+- [ ] Crash webpack if NODE_ENV and BROWSER_ENV are not set
+- [ ] Add ./build/firefox/, ./build/chromium, ./dist/firefox, ./dist/chromium
+- [ ] Eliminate extraneous whitespace in modals and dialogs
+
+### Major tasks
+- [ ] Add omnibox functionality
+- [ ] Add memoization

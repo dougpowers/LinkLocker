@@ -54,6 +54,14 @@ type ConfigReducerAction =
             cipher: LinkLockerCipherParams,
         }
     }
+    | {
+        type: "updateSort";
+        payload: {
+            guid: string,
+            sortMode: SortMode,
+            sortDirection: SortDirection,
+        }
+    }
 
 type ActiveAccountReducerAction = 
     | {
@@ -87,12 +95,14 @@ interface LinkLockerConfig {
 }
 
 interface LinkLockerAcct {
-    username?: string;   
-    guid: string;
-    authSalt:string;
-    authHash: string;
-    cipher?: LinkLockerCipherParams;
-    cipherSalt: string;
+    username?: string,   
+    guid: string,
+    authSalt:string,
+    authHash: string,
+    cipher?: LinkLockerCipherParams,
+    cipherSalt: string,
+    sortMode?: SortMode,
+    sortDirection?: SortDirection,
 }
 
 interface LinkLockerCipherParams {
@@ -248,6 +258,15 @@ const App = () => {
                 updatedAcctList.splice(updatedAcctList.findIndex((a: LinkLockerAcct) => {if (a.guid == action.payload.guid) return}), 1);
                 browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer) });
                 return {...config, accounts: updatedAcctList};
+            case "updateSort":
+                updatedAcctList.forEach((v) => {
+                    if (v.guid === action.payload.guid) {
+                        v.sortMode = action.payload.sortMode;
+                        v.sortDirection = action.payload.sortDirection;
+                    }
+                })
+                browser.storage.local.set({ 'config': JSON.stringify({...config, accounts: updatedAcctList}, JsonReplacer)});
+                return {...config, accounts: updatedAcctList}
         }
     }
 
@@ -391,8 +410,8 @@ const App = () => {
                         guid: guid,
                         cipherHash: res.encoded,
                         linkDir,
-                        sortMode: SortMode.AlphabeticalByHost,
-                        sortDirection: SortDirection.Descending,
+                        sortMode: userAcct.sortMode ? userAcct.sortMode : SortMode.AlphabeticalByHost,
+                        sortDirection: userAcct.sortDirection ? userAcct.sortDirection : SortDirection.Descending,
                         searchTerm: "",
                         errorState: ErrorStateProp.None,
                     };
@@ -447,6 +466,7 @@ const App = () => {
 
     const updateSort = (sortMode: SortMode, sortDirection: SortDirection) => {
         browser.runtime.sendMessage({command: "set_active_account", string: JSON.stringify({...activeAccount, sortMode, sortDirection}, JsonReplacer)});
+        configDispatch({type: "updateSort", payload: {guid: activeAccount.guid, sortMode, sortDirection}});
         activeAccountDispatch({type: "updateSort", payload: {sortMode, sortDirection}})
     }
 

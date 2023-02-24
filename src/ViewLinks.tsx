@@ -229,34 +229,59 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
         }
     }    
 
+    const resizeFavicon = (data: string): Promise<string> => {
+        if (data === "" || !data) {
+            return new Promise((resolve) => {resolve("");})
+        }
+        return new Promise((resolve, reject) => {
+            let image = new Image();
+            image.onload = () => { 
+                let canvas = document.createElement("canvas");
+                let ctx = canvas.getContext('2d');
+
+                canvas.width = constants.FAVICON_WIDTH;
+                canvas.height = constants.FAVICON_HEIGHT;
+
+                if (!ctx) { reject("could not get canvas") }
+                ctx?.drawImage(image, 0, 0, constants.FAVICON_WIDTH, constants.FAVICON_HEIGHT);
+                let resizedFavicon = canvas.toDataURL()
+                console.debug(`Favicon reduced by: ${data.length/resizedFavicon.length}x`);
+                resolve(resizedFavicon); 
+            }
+            image.src = data;
+        })
+    }
+
     const openAddLinkDialog = () => {
         browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
-            setLinkFaviconUrl(tabs.at(0)!.favIconUrl!);
-            let url = new URL(tabs.at(0)!.url!);
-            setLinkUrl(url);
+            console.log()
+            resizeFavicon(tabs.at(0)?.favIconUrl ?? "").then((faviconData) => {
+                setLinkFaviconUrl(faviconData);
+                let url = new URL(tabs.at(0)!.url!);
+                setLinkUrl(url);
 
-            let host = linkDir?.hosts.get(url.hostname);
-            let hostTags = host?.tags;
-            if (host) {
-                setNewHost(false);
-                if (hostTags) {
-                    setLinkTags(hostTags.join(" "));
+                let host = linkDir?.hosts.get(url.hostname);
+                let hostTags = host?.tags;
+                if (host) {
+                    setNewHost(false);
+                    if (hostTags) {
+                        setLinkTags(hostTags.join(" "));
+                    } else {
+                        setLinkTags("");
+                    }
                 } else {
+                    setNewHost(true);
                     setLinkTags("");
                 }
-            } else {
-                setNewHost(true);
-                setLinkTags("");
-            }
-            setLinkName(trimTitle(tabs.at(0)!.title!, url));
-            setAddLinkModalOpen(true);
+                setLinkName(trimTitle(tabs.at(0)!.title!, url));
+                setAddLinkModalOpen(true);
+            });
         }).catch((err) => {console.error(err)});
     }    
 
     const openEditLinkDialog = (link: LinkLockerLink) => {
         let url = new URL(link.href);
         let favicon = linkDir?.hosts.get(url.hostname)?.favicon;
-        let hostTags = linkDir?.hosts.get(url.hostname)?.tags;
         if (favicon) setLinkFaviconUrl(favicon);
 
         setLinkGuid(link.guid);
@@ -267,32 +292,57 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     }
 
     const addLink = (url: URL, name: string, favicon: string, tags: Array<string>, newHostTags: Array<string>) => {
-        browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
-            if (tabs.at(0) != undefined && tabs.at(0)!.url) {
-                tags = tags.concat(newHostTags);
-                let link: LinkLockerLink = {
-                    guid: uuidv4(),
-                    href: url.toString(),
-                    name: name,
-                    timestamp: Date.now(),
-                    tags: tags,
-                    url: url
-                }
-                
-                if (linkDir == null) {
-                    linkDir = {hosts: new Map()};
-                    linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link], tags: newHostTags});
-                } else {
-                    if (linkDir.hosts.get(url.hostname)) {
+        tags = tags.concat(newHostTags);
+        let link: LinkLockerLink = {
+            guid: uuidv4(),
+            href: url.toString(),
+            name: name,
+            timestamp: Date.now(),
+            tags: tags,
+            url: url
+        }
+        
+        if (linkDir == null) {
+            linkDir = {hosts: new Map()};
+            linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link], tags: newHostTags});
+        } else {
+            if (linkDir.hosts.get(url.hostname)) {
+                linkDir.hosts.get(url.hostname)!.links.push(link);
+            } else {
+                linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link], tags: newHostTags});
+            }
+        }
+        updateLinks(linkDir!);
+    }
+
+    const appendLink = (guid: string, url: URL, name: string, timestamp: number, favicon: string, tags: Array<string>, newHostTags: Array<string>) => {
+        resizeFavicon(favicon).then((faviconData) => {
+            tags = tags.concat(newHostTags);
+            let link: LinkLockerLink = {
+                guid: guid,
+                href: url.href,
+                name,
+                timestamp,
+                tags: tags,
+                url: url,
+            }
+
+            if (linkDir == null) {
+                linkDir = {hosts: new Map()};
+                linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: faviconData, links: [link], tags: newHostTags});
+            } else {
+                if (linkDir.hosts.get(url.hostname)) {
+                    if (!linkDir.hosts.get(url.hostname)?.links.find((v) => v.guid === guid)) {
                         linkDir.hosts.get(url.hostname)!.links.push(link);
                     } else {
-                        linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link], tags: newHostTags});
+                        console.warn(`Link ${url.href} is a duplicate and won't be appended.`)
                     }
+                } else {
+                    linkDir.hosts.set(url.hostname, {hostname: url.hostname, favicon: faviconData, links: [link], tags: newHostTags});
                 }
-                updateLinks(linkDir!);
-            } else {
             }
-        }).catch((err) => {console.error(err)});
+            updateLinks(linkDir!);
+        })
     }
 
     const editLink = (guid: string, url: URL, name: string, favicon: string, tags: Array<string>) => {
@@ -1126,10 +1176,9 @@ return (
                                     for (let [hostname, host] of debugList.hosts) {
                                         for (let link of host.links) {
                                             link.url = new URL(link.href);
+                                            appendLink(link.guid, link.url, link.name, link.timestamp, host.favicon ?? "", link.tags, host.tags ?? [])
                                         }
                                     }
-                                    updateLinks(debugList);
-                                    handleHamburgerClose();
                                 }}
                                 sx={{color: "secondary.main"}}
                             >
@@ -1165,34 +1214,42 @@ return (
                         key="import_json"
                         onClick={() => {
                             setJsonImportModalOpen(true);
+                            handleHamburgerClose();
                         }}
                     >Load JSON...</MenuItem>
-                    <MenuItem dense key="download_backup" onClick={() => {
-                        let link = document.createElement("a");
-                        let date = new Date()
-                        link.download = 
-                            `ll-backup-`+
-                            `${date.getFullYear()}`+
-                            `${date.getMonth().toString().padStart(2, '0')}`+
-                            `${date.getDate().toString().padStart(2, '0')}`+
-                            `${date.getHours().toString().padStart(2, '0')}`+
-                            `${date.getMinutes().toString().padStart(2, '0')}.json`
-                        link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer, 4)}`
-                        link.style.display = "none";
-                        document.body.appendChild(link);
-                        window.setTimeout(() => {
-                            link.click();
-                            document.body.removeChild(link);
-                            window.setTimeout(() => {window.close()}, 100);
-                        }, 200)
-                    }}
-                    >Export Links</MenuItem>
+                    {
+                        linkDir?.hosts ?
+                        <MenuItem dense key="download_backup" onClick={() => {
+                            for (let [hostname, host] of linkDir!.hosts) {
+                                console.debug(`Host ${host.hostname} has favicon size ${host.favicon?.length}`)
+                            }
+                            let link = document.createElement("a");
+                            let date = new Date()
+                            link.download = 
+                                `ll-backup-`+
+                                `${date.getFullYear()}`+
+                                `${date.getMonth().toString().padStart(2, '0')}`+
+                                `${date.getDate().toString().padStart(2, '0')}`+
+                                `${date.getHours().toString().padStart(2, '0')}`+
+                                `${date.getMinutes().toString().padStart(2, '0')}.json`
+                            link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer, 4)}`
+                            link.style.display = "none";
+                            document.body.appendChild(link);
+                            window.setTimeout(() => {
+                                link.click();
+                                document.body.removeChild(link);
+                                window.setTimeout(() => {window.close()}, 100);
+                            }, 200)
+                        }}
+                        >Export Links</MenuItem>
+                        :
+                        null
+                    }
                     <MenuItem dense key="logout" onClick={logout} selected>Logout</MenuItem>
                 </Menu>
             </Stack>
         </Stack>
-        <Modal
-            open={editHostModalOpen}
+        <Modal open={editHostModalOpen}
             disableAutoFocus={true}
             sx={{
                 margin: "auto",
@@ -1283,8 +1340,7 @@ return (
                 </Stack>
             </Box>
         </Modal>
-        <Modal
-            open={addLinkModalOpen}
+        <Modal open={addLinkModalOpen}
             disableAutoFocus={true}
             sx={{
                 margin: "auto",
@@ -1405,8 +1461,7 @@ return (
                 </Stack>
             </Box>
         </Modal>
-        <Modal
-            open={editLinkModalOpen}
+        <Modal open={editLinkModalOpen}
             disableAutoFocus={true}
             sx={{
                 margin: "auto",
@@ -1499,8 +1554,7 @@ return (
                 </Stack>
             </Box>
         </Modal>
-        <Modal
-            open={passwordChangeModalOpen}
+        <Modal open={passwordChangeModalOpen}
             disableAutoFocus={true}
             sx={{
                 margin: "auto",
@@ -1602,8 +1656,7 @@ return (
                 </Stack>
             </Box>
         </Modal>
-        <Popover
-            id="entry-popover"
+        <Popover id="entry-popover"
             anchorEl={linkPopoverAnchorEl}
             open={linkPopoverOpen}
             anchorOrigin={{
@@ -1623,8 +1676,7 @@ return (
                 tags: {linkTags}
             </Typography>
         </Popover>
-        <Popover
-            id="host-popover"
+        <Popover id="host-popover"
             anchorEl={hostPopoverAnchorEl}
             open={hostPopoverOpen}
             anchorOrigin={{
@@ -1643,8 +1695,7 @@ return (
                     tags: {host?.tags?.join(" ")}
                 </Typography>
         </Popover>
-        <Dialog 
-            open={acctDeleteDialogOpen}
+        <Dialog open={acctDeleteDialogOpen}
             onClose={handleAcctDeleteDialogClose}
             >
             <DialogTitle>{"Delete Account?"}</DialogTitle>
@@ -1658,8 +1709,7 @@ return (
                 <Button onClick={(e) => {setAcctDeleteDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
             </DialogActions>
         </Dialog>
-        <Dialog 
-            open={hostDeleteDialogOpen}
+        <Dialog open={hostDeleteDialogOpen}
             onClose={handleHostDeleteDialogClose}
             >
             <DialogTitle>{"Delete All Host Links?"}</DialogTitle>
@@ -1671,8 +1721,7 @@ return (
                 <Button size="small" onClick={(e) => {setHostDeleteDialogOpen(false); deleteHost()}} sx={{color: 'error.main'}}>DELETE</Button>
             </DialogActions>
         </Dialog>
-        <Dialog 
-            open={openManyLinksDialog}
+        <Dialog open={openManyLinksDialog}
             >
             <DialogTitle>Open {displayedList.length} tab{displayedList.length > 1 ? "s" : ""}?</DialogTitle>
             <DialogContent sx={{overflow: "hidden"}}>
@@ -1684,9 +1733,7 @@ return (
                 <Button size="small" onClick={(e) => {setOpenManyLinksDialog(false); openAllLinks()}}>Open</Button>
             </DialogActions>
         </Dialog>
-        <Modal
-            open={jsonImportModalOpen}
-        >
+        <Modal open={jsonImportModalOpen}>
             <Box
                 sx={{
                     margin: "1rem",
@@ -1697,24 +1744,28 @@ return (
                 }}
             >
                 <Stack direction="column">
-                <TextField
-                    multiline
-                    inputRef={jsonImportInput}
-                    onFocus={(e) => {e.currentTarget.select()}}
-                    sx={{
-                        height: "100%",
-                        width: "100%"
-                    }}
-                    size="small"
-                    maxRows={10}
-                />
+                    <Typography variant="body1" color="text.primary">
+                        Paste JSON below
+                    </Typography>
+                    <TextField
+                        multiline
+                        inputRef={jsonImportInput}
+                        onFocus={(e) => {e.currentTarget.select()}}
+                        sx={{
+                            height: "100%",
+                            width: "100%"
+                        }}
+                        size="small"
+                        minRows={9}
+                        maxRows={9}
+                    />
                 <Stack direction="row">
                     <Button
                         onClick={() => {
                             let importedDir: LinkLockerLinkDir = JSON.parse(jsonImportInput.current.value, JsonReviver);
                             for (let [hostname, host] of importedDir.hosts) {
                                 for (let link of host.links) {
-                                    addLink(link.url, link.name, host.favicon, link.tags, host.tags!);
+                                    appendLink(link.guid, link.url, link.name, link.timestamp, host.favicon, link.tags, host.tags!);
                                 }
                             }
                             setJsonImportModalOpen(false);
@@ -1729,8 +1780,7 @@ return (
             </Box>
         </Modal>
         { __IN_DEBUG__ ?
-            <Modal
-                open={jsonDumpOpen}
+            <Modal open={jsonDumpOpen}
                 onKeyDown={(e) => {
                     if (e.key === "Enter") {
                         setJsonDumpOpen(false);
