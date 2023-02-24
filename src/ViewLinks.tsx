@@ -9,14 +9,15 @@ import EditIcon from "@mui/icons-material/Edit";
 import LinkIcon from "@mui/icons-material/Link";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
+import HelpOutline from "@mui/icons-material/HelpOutline"
+import Close from "@mui/icons-material/Close"
 import InfoIcon from "@mui/icons-material/Info";
 import KeyboardDoubleArrowDown from "@mui/icons-material/KeyboardDoubleArrowDown";
 import KeyboardDoubleArrowUp from "@mui/icons-material/KeyboardDoubleArrowUp";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
-import { LinkLockerLinkDir, LinkLockerLink, LinkLockerLinkHost, JsonReplacer, JsonReviver, modalBoxStyle} from "./App";
+import { LinkLockerLinkDir, LinkLockerLink, LinkLockerLinkHost, JsonReplacer, JsonReviver, modalBoxStyle, monoStyle} from "./App";
 import Fab from "@mui/material/Fab";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -31,6 +32,8 @@ import TextField from "@mui/material/TextField";
 import Fuse from "fuse.js";
 import {v4 as uuidv4} from 'uuid';
 import Popover from "@mui/material/Popover";
+import { link } from "fs";
+import { fontSize } from "@mui/system";
 
 declare var __IN_DEBUG__: boolean;
 declare var __DEBUG_LIST__: string;
@@ -132,6 +135,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const [editHostModalOpen, setEditHostModalOpen] = useState(false);
     const [jsonDumpOpen, setJsonDumpOpen] = useState(false);
     const [jsonImportModalOpen, setJsonImportModalOpen] = useState(false);
+    const [searchHelpModalOpen, setSearchHelpModalOpen] = useState(false);
     const [linkGuid, setLinkGuid] = useState("");
     const [linkFaviconUrl, setLinkFaviconUrl] = useState("");
     const [linkUrl, setLinkUrl] = useState<null | URL>(null);
@@ -570,7 +574,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
                         <Stack direction="column" sx={{
                             p: 0.12,
                             m: 0.12
-                        }} justifyItems="left" alignItems="left" key={index}>
+                        }} justifyItems="left" alignItems="left" key={`${index}${host}`}>
                             <Stack 
                                 onMouseOver={function (e) {
                                     (Array.from(e.currentTarget.querySelectorAll("button")) as HTMLButtonElement[]).forEach((v) => {v.style.display = "inline-flex";})
@@ -680,7 +684,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
                 let header: (ReactNode | null) = null;
                 if (new Date(link.timestamp).toDateString() != dateCount.toDateString()) {
                     dateCount = new Date(link.timestamp);
-                    header = <Typography variant="body2" sx={{m: .24, p: .24}}>{dateCount.toDateString()}</Typography>
+                    header = <Typography key={`${link.timestamp}`} variant="body2" sx={{m: .24, p: .24}}>{dateCount.toDateString()}</Typography>
                 }
                 return (
                     [
@@ -798,6 +802,8 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
             let includedHosts: string[] = [];
             let includedTags: string[] = [];
             let excludedTags: string[] = [];
+            let afterDate: Date | null = null;
+            let beforeDate: Date | null = null;
 
             let query: string = searchTerm;
             let hosts = Array.from(linkDir.hosts.values());
@@ -826,6 +832,26 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
                 }
             )
 
+            query = query.replaceAll(
+                /after:([^\s]*)/g, 
+                (_match, p1:string) => {
+                    if (p1.match(/(\d){4}-(\d){2}-(\d){2}/)) {
+                        afterDate = new Date(`${p1}T23:59`);
+                    } 
+                    return "";
+                }
+            )
+
+            query = query.replaceAll(
+                /before:([^\s]*)/g, 
+                (_match, p1:string) => {
+                    if (p1.match(/(\d){4}-(\d){2}-(\d){2}/)) {
+                        beforeDate = new Date(`${p1}T00:00`);
+                    } 
+                    return "";
+                }
+            )
+
             if (includedHosts.length > 0) {
                 hosts = hosts.filter((v) => {
                     for (let incl of includedHosts) {
@@ -846,14 +872,14 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
                     let links = host.links.filter((link) => {
                         for (let tag of link.tags) {
                             for (let incl of includedTags) {
-                                if (tag == incl) {
+                                if (tag.localeCompare(incl, undefined, {sensitivity: "accent"}) === 0) {
                                     return true;
                                 }
                             }
                         }
                         return false;
                     })
-                    if (links.length > 0) filteredHosts.push({...host, links: links})
+                    if (links.length > 0) filteredHosts.push({...host, links})
                 }
                 hosts = filteredHosts;
             }
@@ -864,18 +890,45 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
                     let links = host.links.filter((link) => {
                         for (let tag of link.tags) {
                             for (let excl of excludedTags) {
-                                if (tag == excl) {
+                                if (tag.localeCompare(excl, undefined, {sensitivity: "accent"}) === 0) {
                                     return false;
                                 }
                             }
                         }
                         return true;
                     })
-                    if (links.length > 0) filteredHosts.push({...host, links: links})
+                    if (links.length > 0) filteredHosts.push({...host, links})
                 }
                 hosts = filteredHosts;
             }
 
+            if (afterDate !== null) {
+                let filteredHosts: LinkLockerLinkHost[] = new Array();
+                for (let host of hosts) {
+                    let links = host.links.filter((link) => {
+                        if (link.timestamp > afterDate!.getTime()) {
+                            return true;
+                        }
+                        return false;
+                    })
+                    if (links.length > 0) filteredHosts.push({...host, links})
+                }
+                hosts = filteredHosts;
+            }
+
+            if (beforeDate !== null) {
+                let filteredHosts: LinkLockerLinkHost[] = new Array();
+                for (let host of hosts) {
+                    let links = host.links.filter((link) => {
+                        if (link.timestamp < beforeDate!.getTime()) {
+                            return true;
+                        }
+                        return false;
+                    })
+                    if (links.length > 0) filteredHosts.push({...host, links})
+                }
+                hosts = filteredHosts;
+            }
 
             if (!(query.match(/^[\s]*$/))) {
                 let tokenizedTerm = tokeniseStringWithQuotesBySpaces(query);
@@ -966,21 +1019,27 @@ return (
             maxWidth={constants.INNER_MAX_WIDTH} 
             sx={{
         }}>
-            <TextField
-                variant="outlined"
-                size="small"
-                label="Search Links"
-                inputRef={searchField}
-                fullWidth
-                InputProps={{
-                    endAdornment: <InputAdornment position="end">
-                        <SearchIcon fontSize="small" />
-                        </InputAdornment>,
-                }}
-                sx={{marginBottom: "4px"}}
-                onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); updateSearchTerm(searchField.current.value); searchField.current.select()}}}
-                defaultValue={searchTerm}
-            />
+            <Stack direction="row" alignItems="center" justifyItems="center">
+                <TextField
+                    variant="outlined"
+                    size="small"
+                    label="Search Links"
+                    inputRef={searchField}
+                    fullWidth
+                    InputProps={{
+                        sx: {fontSize: 14}
+                    }}
+                    InputLabelProps={{
+                        sx: {fontSize: 14}
+                    }}
+                    sx={{marginBottom: "4px"}}
+                    onKeyDown={(e) => {if (e.key == "Enter") {setSearchTerm(searchField.current.value); updateSearchTerm(searchField.current.value); searchField.current.select()}}}
+                    defaultValue={searchTerm}
+                />
+                <IconButton sx={{marginLeft: 0.2}} size="small" onClick={() => {setSearchHelpModalOpen(true);}}>
+                    <HelpOutline fontSize="small"/>
+                </IconButton>
+            </Stack>
             <Stack direction="row" alignItems="center" sx={{mb: "0.4rem", mt: "0.2rem"}}>
                 <Typography
                     variant="body2"
@@ -1088,7 +1147,7 @@ return (
                     null
                 }
             </Box>
-            <Box flexGrow={1} />
+            <Box flexGrow={1} key="unique" />
             <Stack spacing={1} sx={{mt: 2}} direction="row" alignItems="center">
                 <Fab 
                     variant="extended"
@@ -1211,6 +1270,29 @@ return (
                 </Menu>
             </Stack>
         </Stack>
+        <Modal open={searchHelpModalOpen} onClose={() => {setSearchHelpModalOpen(false)}}
+            disableAutoFocus={true}
+        >
+            <Box
+                sx={modalBoxStyle}
+            >
+                <Stack direction="row" alignItems="center">
+                    <Typography variant="body1">Search Help</Typography>
+                    <Box flexGrow={1}/>
+                    <IconButton size="small" onClick={() => {setSearchHelpModalOpen(false);}}>
+                        <Close fontSize="small" color="error" />
+                    </IconButton>
+                </Stack>
+                <Typography variant="caption" lineHeight="1rem">
+                    Link Locker provides search operators to help you filter your links.<br/>
+                    <Typography sx={monoStyle}>{`host:<term>`}</Typography> filters out any link that doesn't contain <Typography sx={monoStyle}>{`<term>`}</Typography> somewhere in its hostname.<br/>
+                    <Typography sx={monoStyle}>{`tag:<term>`}</Typography> filters out any link that doesn't have a tag that matches <Typography sx={monoStyle}>{`<term>`}</Typography> exactly.<br/>
+                    <Typography sx={monoStyle}>{`host:`}</Typography> and <Typography sx={monoStyle}>{`tag:`}</Typography> can be prefixed with <Typography sx={monoStyle}>-</Typography> to <Typography variant="caption" fontStyle="italic" display="inline">exclude</Typography> links that match <Typography sx={monoStyle}>{`<term>`}</Typography>.<br/>
+                    <Typography sx={monoStyle}>{`before:<YYYY-MM-DD>`}</Typography> filters out any link that was created before <Typography sx={monoStyle}>{`<YYYY-MM-DD>`}</Typography>.<br/>
+                    <Typography sx={monoStyle}>{`after:<YYYY-MM-DD>`}</Typography> filters out any link that was created after <Typography sx={monoStyle}>{`<YYYY-MM-DD>`}</Typography>.<br/>
+                </Typography>
+            </Box>
+        </Modal>
         <Modal open={editHostModalOpen}
             disableAutoFocus={true}
         >
@@ -1751,7 +1833,7 @@ return (
                     link.download = 
                         `ll-export-`+
                         `${date.getFullYear()}`+
-                        `${date.getMonth().toString().padStart(2, '0')}`+
+                        `${(date.getMonth()+1).toString().padStart(2, '0')}`+
                         `${date.getDate().toString().padStart(2, '0')}`+
                         `${date.getHours().toString().padStart(2, '0')}`+
                         `${date.getMinutes().toString().padStart(2, '0')}.json`

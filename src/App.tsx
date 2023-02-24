@@ -208,6 +208,13 @@ export const modalBoxStyle = {
     flexDirection: "column",
 }
 
+export const monoStyle = {
+    fontFamily: "monospace", 
+    fontSize: "0.75rem", 
+    display: "inline",
+    bgcolor: "grey.800",
+}
+
 //Return an array of account guid/username tuples
 const getAcctList = (config: LinkLockerConfig): [string,string][] => {
     if (config) {
@@ -507,7 +514,7 @@ const App = () => {
             link.download = 
                 `ll-accountbackup-`+
                 `${date.getFullYear()}`+
-                `${date.getMonth().toString().padStart(2, '0')}`+
+                `${(date.getMonth()+1).toString().padStart(2, '0')}`+
                 `${date.getDate().toString().padStart(2, '0')}`+
                 `${date.getHours().toString().padStart(2, '0')}`+
                 `${date.getMinutes().toString().padStart(2, '0')}.json`
