@@ -94,7 +94,7 @@ interface LinkLockerConfig {
     accounts: Array<LinkLockerAcct>,
 }
 
-interface LinkLockerAcct {
+export interface LinkLockerAcct {
     username?: string,   
     guid: string,
     authSalt:string,
@@ -231,7 +231,6 @@ const App = () => {
         switch (action.type) {
             case "newConfig":
                 browser.storage.local.set({ 'config': JSON.stringify(action.payload.newConfig, JsonReplacer) });
-                setIsLoading(false);
                 return action.payload.newConfig;
             case "newAcct":
                 updatedAcctList.push(action.payload.newAcct);
@@ -418,9 +417,9 @@ const App = () => {
                     let sessionConfig = JSON.stringify(newActiveAccount, JsonReplacer);
                     browser.runtime.sendMessage({command: "set_active_account", string: sessionConfig});
                     // window.localStorage.setItem("sessionConfig", JSON.stringify(newActiveAccount, JsonReplacer));
+                    setIsLoading(false);
                     activeAccountDispatch({type: "login", payload: newActiveAccount})
                 });
-                setIsLoading(false);
             }).catch((err) => {
                 //Login failed. Error-style the passwordInput
                 updateFailedLogin(true);
@@ -436,9 +435,16 @@ const App = () => {
         activeAccountDispatch({type: "login", payload: {guid: "", cipherHash: "", linkDir: null, sortMode: SortMode.AlphabeticalByHost, sortDirection: SortDirection.Descending, searchTerm: "", errorState: ErrorStateProp.None}})
     }
 
-    const deleteAcct = () => {
-        configDispatch({type: "removeAcct", payload: {guid: activeAccount.guid}});
-        logout();
+    const deleteAcct = (password: string) => {
+        if (activeAccount.guid !== "") {
+            let userAcct = getAcct(activeAccount.guid);
+            argon2.verify({pass: password, encoded: userAcct.authHash}).then((res) => {
+                configDispatch({type: "removeAcct", payload: {guid: activeAccount.guid}});
+                logout();
+            }).catch((e) => {
+                activeAccountDispatch({type: "updateErrorState", payload: activeAccount.errorState | ErrorStateProp.DeleteAcctPasswordError});
+            })
+        }
     }
 
     const showAcctCreate = () => {
@@ -475,6 +481,39 @@ const App = () => {
         activeAccountDispatch({type: "updateSearchTerm", payload: searchTerm})
     }
 
+    const exportAccountBackup = () => {
+        if (activeAccount.guid !== "") {
+            let userAcct = getAcct(activeAccount.guid);
+
+            let link = document.createElement("a");
+            let date = new Date()
+            link.download = 
+                `ll-accountbackup-`+
+                `${date.getFullYear()}`+
+                `${date.getMonth().toString().padStart(2, '0')}`+
+                `${date.getDate().toString().padStart(2, '0')}`+
+                `${date.getHours().toString().padStart(2, '0')}`+
+                `${date.getMinutes().toString().padStart(2, '0')}.json`
+            link.href = `data:text/html,${JSON.stringify(userAcct, JsonReplacer, 4)}`
+            link.style.display = "none";
+            document.body.appendChild(link);
+            window.setTimeout(() => {
+                link.click();
+                document.body.removeChild(link);
+                window.setTimeout(() => {window.close()}, 100);
+            }, 200)
+        }
+    }
+
+    const importAccountBackup = (acct: LinkLockerAcct) => {
+        if (getAcct(acct.guid)) {
+            console.error("An account with this guid already exists!");
+        } else {
+            configDispatch({type: "newAcct", payload: {newAcct: acct}})
+        }
+        updateAddingNewAcct(false);
+    }
+
     //Async function ran on every popup open to get the "config" key from local extension storage and prime the app state
     async function getConfigsFromStorage() {
         let {config: storedConfigString} = await browser.storage.local.get("config");
@@ -486,12 +525,12 @@ const App = () => {
             configDispatch({type: "newConfig", payload: {newConfig: loadedConfig}})
 
             //Try to load session data
-            // let sessionConfigString = window.localStorage.getItem('sessionConfig');
             browser.runtime.sendMessage(null, {command: "get_active_account"}).then((payload) => {
                 if (payload && payload.string) {
                     let activeAccount = JSON.parse(payload.string, JsonReviver) as LinkLockerActiveAccount;
                     activeAccountDispatch({type: "login", payload: activeAccount})
                 }
+                setIsLoading(false);
             });
 
         } else {
@@ -501,7 +540,7 @@ const App = () => {
                 accounts: new Array(),
             };
             configDispatch({type: "newConfig", payload: {newConfig: newConfig}})
-            // setIsLoading(false);
+            setIsLoading(false);
             return;
         }
     }
@@ -573,14 +612,14 @@ const App = () => {
                         </Typography>
                         {/* Conditionally render the three different components and a loading indicator */}
                         {
-                            renderedComponent == RenderedComponent.Loading || renderedComponent == null ? 
+                            renderedComponent == RenderedComponent.Loading || renderedComponent == null || isLoading ? 
                             <LoadingButton loading variant="outlined">Loading...</LoadingButton>
                             :
                             null
                         }
                         {
                             renderedComponent == RenderedComponent.AcctCreate ?
-                            <AcctCreate addAcct={addAcct} ref={acctCreateRef} />
+                            <AcctCreate addAcct={addAcct} importAcct={importAccountBackup} ref={acctCreateRef} />
                             :
                             null
                         }
@@ -599,6 +638,7 @@ const App = () => {
                                 updateSearchTerm={updateSearchTerm}
                                 logout={logout} 
                                 deleteAcct={deleteAcct} 
+                                exportAcct={exportAccountBackup}
                                 changePassword={changeActiveAccountPassword}
                                 startSortMode={activeAccount.sortMode}
                                 startSortDirection={activeAccount.sortDirection}

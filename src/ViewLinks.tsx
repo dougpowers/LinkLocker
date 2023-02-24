@@ -44,7 +44,8 @@ type Props = {
     startSortDirection: SortDirection,
     startSearchTerm: string,
     logout: () => void,
-    deleteAcct: () => void,
+    deleteAcct: (password: string) => void,
+    exportAcct: () => void,
     changePassword: (oldPassword: string, newPassword: string) => void,
     errorState: ErrorStateProp,
 }
@@ -76,12 +77,15 @@ export const enum ChangePasswordErrorState {
     InvalidPassword,
 }
 
-const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm, startSortMode, startSortDirection, startSearchTerm, logout, deleteAcct, changePassword, errorState}: Props) => {
+const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm, startSortMode, startSortDirection, startSearchTerm, logout, deleteAcct, exportAcct, changePassword, errorState}: Props) => {
     
     var entryScrollAmount: number = 0;
     var entryScrollInterval: number;
     var displayedList: LinkLockerLink[] = [];
 
+    const acctDeletePasswordField: any = createRef();
+    const acctDeletePasswordInput: any = createRef();
+    const acctDeleteDeleteButton: any = createRef();
     const addLinkButton: any = createRef();
     const addLinkNameField: any = createRef();
     const addLinkTagsField: any = createRef();
@@ -97,6 +101,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const editHostModalDeleteButton: any = createRef();
     const editHostModalCancelButton: any = createRef();
     const jsonImportInput: any = createRef();
+    const jsonImportModalImportButton: any = createRef();
     const linkDisplayBox: any = createRef();
     const passwordChangeOldPasswordField: any = createRef();
     const passwordChangeOldPasswordInput: any = createRef();
@@ -118,6 +123,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const [sortModeMenuAnchorEl, setSortModeMenuAnchorEl] = useState<null | HTMLElement>(null);
     const sortModeMenuOpen = Boolean(sortModeMenuAnchorEl);
     const [acctDeleteDialogOpen, setAcctDeleteDialogOpen] = useState(false);
+    const [acctDeleteModalOpen, setAcctDeleteModalOpen] = useState(false);
     const [hostDeleteDialogOpen, setHostDeleteDialogOpen] = useState(false);
     const [openManyLinksDialog, setOpenManyLinksDialog] = useState(false);
     const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
@@ -176,22 +182,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
         }
     }
 
-    const dirFromList = (links: LinkLockerLink[], existingDir: LinkLockerLinkDir): LinkLockerLinkDir => {
-        let dir = { hosts: new Map() };
-        links.forEach((link, i) => {
-            let url = new URL(link.href);
-
-            if (dir.hosts.get(url.hostname)) {
-                dir.hosts.get(url.hostname)!.links.push(link);
-            } else {
-                let favicon = existingDir.hosts.get(url.hostname)?.favicon;
-                dir.hosts.set(url.hostname, {hostname: url.hostname, favicon: favicon, links: [link]});
-            }
-        })
-
-        return dir;
-    }
-
     const deleteHost = () => {
         if (host != null) {
             linkDir?.hosts.delete(host.hostname);
@@ -245,7 +235,9 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
                 if (!ctx) { reject("could not get canvas") }
                 ctx?.drawImage(image, 0, 0, constants.FAVICON_WIDTH, constants.FAVICON_HEIGHT);
                 let resizedFavicon = canvas.toDataURL()
-                console.debug(`Favicon reduced by: ${data.length/resizedFavicon.length}x`);
+                if (__IN_DEBUG__) {
+                    console.debug(`Favicon reduced by: ${data.length/resizedFavicon.length}x`);
+                }
                 resolve(resizedFavicon); 
             }
             image.src = data;
@@ -1179,6 +1171,7 @@ return (
                                             appendLink(link.guid, link.url, link.name, link.timestamp, host.favicon ?? "", link.tags, host.tags ?? [])
                                         }
                                     }
+                                    handleHamburgerClose();
                                 }}
                                 sx={{color: "secondary.main"}}
                             >
@@ -1190,8 +1183,7 @@ return (
                     <MenuItem  
                         key="delete" 
                         dense
-                        divider 
-                        onClick={() => {setAcctDeleteDialogOpen(true); handleHamburgerClose();}} 
+                        onClick={() => {setAcctDeleteModalOpen(true); handleHamburgerClose();}} 
                         sx={{
                             color: "error.main",
                         }}
@@ -1201,11 +1193,8 @@ return (
                     <MenuItem  
                         key="change" 
                         dense
-                        divider 
+                        divider
                         onClick={() => {setPasswordChangeModalOpen(true); handleHamburgerClose();}} 
-                        sx={{
-                            color: "error.main",
-                        }}
                     >
                         Change Password...
                     </MenuItem>
@@ -1216,17 +1205,14 @@ return (
                             setJsonImportModalOpen(true);
                             handleHamburgerClose();
                         }}
-                    >Load JSON...</MenuItem>
+                    >Load Links...</MenuItem>
                     {
                         linkDir?.hosts ?
-                        <MenuItem dense key="download_backup" onClick={() => {
-                            for (let [hostname, host] of linkDir!.hosts) {
-                                console.debug(`Host ${host.hostname} has favicon size ${host.favicon?.length}`)
-                            }
+                        <MenuItem dense key="export_links" onClick={() => {
                             let link = document.createElement("a");
                             let date = new Date()
                             link.download = 
-                                `ll-backup-`+
+                                `ll-export-`+
                                 `${date.getFullYear()}`+
                                 `${date.getMonth().toString().padStart(2, '0')}`+
                                 `${date.getDate().toString().padStart(2, '0')}`+
@@ -1241,7 +1227,16 @@ return (
                                 window.setTimeout(() => {window.close()}, 100);
                             }, 200)
                         }}
-                        >Export Links</MenuItem>
+                        >Export Links...</MenuItem>
+                        :
+                        null
+                    }
+                    {
+                        linkDir?.hosts ?
+                        <MenuItem dense key="download_backup" onClick={() => {
+                            exportAcct();
+                        }}
+                        >Backup Account...</MenuItem>
                         :
                         null
                     }
@@ -1651,7 +1646,82 @@ return (
                             Change and Logout
                         </Button>
                         <Box flexGrow={1} />
-                        <Button variant="contained" size="small" ref={editHostModalCancelButton} onClick={() => {setPasswordChangeModalOpen(false)}}>Cancel</Button>
+                        <Button variant="contained" size="small" onClick={() => {setPasswordChangeModalOpen(false)}}>Cancel</Button>
+                    </Stack>
+                </Stack>
+            </Box>
+        </Modal>
+        <Modal open={acctDeleteModalOpen}
+            disableAutoFocus={true}
+            sx={{
+                margin: "auto",
+                maxHeight: "fit-content",
+            }}
+        >
+            <Box
+                maxWidth="80%"
+                marginTop="20px"
+                marginLeft="auto"
+                marginRight="auto"
+                maxHeight="fit-content"
+                bgcolor="background.paper"
+                padding="10px"
+                border={1}
+                borderRadius={1}
+                borderColor="primary.main"
+                display="flex"
+                flexDirection="column"
+            >
+                <Stack direction="column" spacing={1}>
+                    <Typography
+                        variant="h6"
+                    >
+                        Delete Account
+                    </Typography> 
+                    <TextField
+                        variant="outlined"
+                        inputProps={{type: "password"}}
+                        size="small"
+                        label="Password"
+                        autoFocus={acctDeleteModalOpen || (ErrorStateProp.DeleteAcctPasswordError === (errorState & ErrorStateProp.DeleteAcctPasswordError))}
+                        ref={acctDeletePasswordField}
+                        inputRef={acctDeletePasswordInput}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                acctDeleteDeleteButton.current.click();
+                            }
+                        }}
+                        error={
+                            ErrorStateProp.DeleteAcctPasswordError === (errorState & ErrorStateProp.DeleteAcctPasswordError)
+                        }
+                        helperText={
+                            ErrorStateProp.DeleteAcctPasswordError === (errorState & ErrorStateProp.DeleteAcctPasswordError) ?
+                            "Password Incorrect"
+                            :
+                            null
+                        }
+                    >
+                    </TextField>
+                    <Stack direction="row" spacing={2} marginTop="10px">
+                        <Button 
+                        variant="contained" 
+                        ref={acctDeleteDeleteButton}
+                        size="small"
+                        sx={{
+                            bgcolor: "error.main",
+                            color: "error.contrastText",
+                            '&:hover': {
+                                backgroundColor: "error.dark",
+                                color: "error.contrastText"
+                            }
+                        }}
+                        onClick={() => {
+                            deleteAcct(acctDeletePasswordInput.current.value);
+                        }}>
+                            Delete
+                        </Button>
+                        <Box flexGrow={1} />
+                        <Button variant="contained" size="small" onClick={() => {setAcctDeleteModalOpen(false)}}>Cancel</Button>
                     </Stack>
                 </Stack>
             </Box>
@@ -1695,20 +1765,6 @@ return (
                     tags: {host?.tags?.join(" ")}
                 </Typography>
         </Popover>
-        <Dialog open={acctDeleteDialogOpen}
-            onClose={handleAcctDeleteDialogClose}
-            >
-            <DialogTitle>{"Delete Account?"}</DialogTitle>
-            <DialogContent sx={{
-                    overflow: "hidden",
-                }}>
-                <DialogContentText>Are you sure you want to delete this account?</DialogContentText>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={(e) => {setAcctDeleteDialogOpen(false)}} autoFocus>Go Back</Button>
-                <Button onClick={(e) => {setAcctDeleteDialogOpen(false); deleteAcct()}} sx={{color: 'error.main'}}>DELETE</Button>
-            </DialogActions>
-        </Dialog>
         <Dialog open={hostDeleteDialogOpen}
             onClose={handleHostDeleteDialogClose}
             >
@@ -1735,20 +1791,26 @@ return (
         </Dialog>
         <Modal open={jsonImportModalOpen}>
             <Box
-                sx={{
-                    margin: "1rem",
-                    border: "1",
-                    borderRadius: "1",
-                    borderColor: "primary.main",
-                    backgroundColor: "rgba(0,0,0,255)"
-                }}
+                maxWidth="95%"
+                marginTop="10px"
+                marginLeft="auto"
+                marginRight="auto"
+                maxHeight="fit-content"
+                bgcolor="background.paper"
+                padding="10px"
+                border={1}
+                borderRadius={1}
+                borderColor="primary.main"
+                display="flex"
+                flexDirection="column"
             >
                 <Stack direction="column">
                     <Typography variant="body1" color="text.primary">
-                        Paste JSON below
+                        Paste text from export file below
                     </Typography>
                     <TextField
                         multiline
+                        autoFocus={jsonImportModalOpen}
                         inputRef={jsonImportInput}
                         onFocus={(e) => {e.currentTarget.select()}}
                         sx={{
@@ -1756,14 +1818,18 @@ return (
                             width: "100%"
                         }}
                         size="small"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") jsonImportModalImportButton.current.click();
+                        }}
                         minRows={9}
                         maxRows={9}
                     />
                 <Stack direction="row">
                     <Button
+                        ref={jsonImportModalImportButton}
                         onClick={() => {
                             let importedDir: LinkLockerLinkDir = JSON.parse(jsonImportInput.current.value, JsonReviver);
-                            for (let [hostname, host] of importedDir.hosts) {
+                            for (let [_hostname, host] of importedDir.hosts) {
                                 for (let link of host.links) {
                                     appendLink(link.guid, link.url, link.name, link.timestamp, host.favicon, link.tags, host.tags!);
                                 }
