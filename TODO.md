@@ -15,6 +15,7 @@
 - [x] Open all links button at bottom of screen (warning if over MAX_NUM_TAB_OPENS)
 - [x] Clean up import modal borders and padding
 - [x] Add cancel button to AcctCreate when appropriate
+- [ ] Add popover info to search, informing of search and filter operators
 
 ### Major tasks
 - [x] Implement link editing and implement edit icon
@@ -38,6 +39,7 @@
 - [x] Add option download full, encrypted, account backup. 
 - [x] Add login and account create screen menu modal with option to import encrypted account backups
 - [x] Add dialog for link export warning that the exported links will be unencrypted
+- [ ] Add 'from:' and 'to:' operators to clamp dates
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)
 
 ## Delayed Changes
