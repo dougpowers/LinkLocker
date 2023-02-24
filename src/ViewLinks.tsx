@@ -16,7 +16,7 @@ import KeyboardDoubleArrowUp from "@mui/icons-material/KeyboardDoubleArrowUp";
 import { createRef, ReactNode, useEffect, MouseEvent, useState } from "react";
 import * as browser from "webextension-polyfill";
 import * as constants from './constants';
-import { LinkLockerLinkDir, LinkLockerLink, LinkLockerLinkHost, JsonReplacer, JsonReviver } from "./App";
+import { LinkLockerLinkDir, LinkLockerLink, LinkLockerLinkHost, JsonReplacer, JsonReviver, modalBoxStyle} from "./App";
 import Fab from "@mui/material/Fab";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -122,12 +122,12 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const hostPopoverOpen = Boolean(hostPopoverAnchorEl);
     const [sortModeMenuAnchorEl, setSortModeMenuAnchorEl] = useState<null | HTMLElement>(null);
     const sortModeMenuOpen = Boolean(sortModeMenuAnchorEl);
-    const [acctDeleteDialogOpen, setAcctDeleteDialogOpen] = useState(false);
     const [acctDeleteModalOpen, setAcctDeleteModalOpen] = useState(false);
     const [hostDeleteDialogOpen, setHostDeleteDialogOpen] = useState(false);
     const [openManyLinksDialog, setOpenManyLinksDialog] = useState(false);
     const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
     const [confirmPasswordError, setConfirmPasswordError] = useState<ChangePasswordErrorState>(ChangePasswordErrorState.None);
+    const [confirmLinkExportDialogOpen, setConfirmLinkExportDialogOpen] = useState(false);
     const [editLinkModalOpen, setEditLinkModalOpen] = useState(false);
     const [editHostModalOpen, setEditHostModalOpen] = useState(false);
     const [jsonDumpOpen, setJsonDumpOpen] = useState(false);
@@ -1023,11 +1023,8 @@ return (
                         <KeyboardDoubleArrowUp 
                             ref={sortDirectionSelector} 
                             sx={{
-                                // backgroundColor: "primary.main", 
-                                // borderRadius: "6px",
                                 cursor: "pointer", 
                                 fontSize: 16, 
-                                // color: "primary.contrastText", 
                                 color: "primary.main",
                             }} 
                             onClick={() => {setSortDirection(SortDirection.Descending); updateSort(sortMode, SortDirection.Descending); linkDisplayBox.current.scrollTo(0,0)}}
@@ -1076,15 +1073,7 @@ return (
                     displayedList.length > 0 ?
                     <Button 
                         size="small"
-                        sx={{
-                            bgcolor: "primary.main",
-                            color: "primary.contrastText",
-                            mt: "1rem",
-                            '&:hover': {
-                                backgroundColor: "primary.dark",
-                                color: "primary.contrastText"
-                            }
-                        }}
+                        variant="contained"
                         onClick={(e) => {
                             if (displayedList?.length <= constants.MAX_NUM_TAB_OPENS) { 
                                 openAllLinks();
@@ -1206,64 +1195,27 @@ return (
                             handleHamburgerClose();
                         }}
                     >Load Links...</MenuItem>
-                    {
-                        linkDir?.hosts ?
-                        <MenuItem dense key="export_links" onClick={() => {
-                            let link = document.createElement("a");
-                            let date = new Date()
-                            link.download = 
-                                `ll-export-`+
-                                `${date.getFullYear()}`+
-                                `${date.getMonth().toString().padStart(2, '0')}`+
-                                `${date.getDate().toString().padStart(2, '0')}`+
-                                `${date.getHours().toString().padStart(2, '0')}`+
-                                `${date.getMinutes().toString().padStart(2, '0')}.json`
-                            link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer, 4)}`
-                            link.style.display = "none";
-                            document.body.appendChild(link);
-                            window.setTimeout(() => {
-                                link.click();
-                                document.body.removeChild(link);
-                                window.setTimeout(() => {window.close()}, 100);
-                            }, 200)
+                    <MenuItem key="export_links" 
+                        dense onClick={() => {
+                            setConfirmLinkExportDialogOpen(true);
                         }}
-                        >Export Links...</MenuItem>
-                        :
-                        null
-                    }
-                    {
-                        linkDir?.hosts ?
-                        <MenuItem dense key="download_backup" onClick={() => {
+                        disabled={linkDir?.hosts == undefined}
+                    >Export Links...</MenuItem>
+                    <MenuItem key="download_backup"
+                        dense onClick={() => {
                             exportAcct();
                         }}
-                        >Backup Account...</MenuItem>
-                        :
-                        null
-                    }
+                        disabled={linkDir?.hosts == undefined}
+                    >Backup Account...</MenuItem>
                     <MenuItem dense key="logout" onClick={logout} selected>Logout</MenuItem>
                 </Menu>
             </Stack>
         </Stack>
         <Modal open={editHostModalOpen}
             disableAutoFocus={true}
-            sx={{
-                margin: "auto",
-                maxHeight: "fit-content",
-            }}
         >
             <Box
-                maxWidth="80%"
-                marginTop="20px"
-                marginLeft="auto"
-                marginRight="auto"
-                maxHeight="fit-content"
-                bgcolor="background.paper"
-                padding="10px"
-                border={1}
-                borderRadius={1}
-                borderColor="primary.main"
-                display="flex"
-                flexDirection="column"
+                sx={modalBoxStyle}
             >
                 <Stack flexDirection="row">
                     <Typography
@@ -1337,24 +1289,9 @@ return (
         </Modal>
         <Modal open={addLinkModalOpen}
             disableAutoFocus={true}
-            sx={{
-                margin: "auto",
-                maxHeight: "fit-content",
-            }}
         >
             <Box
-                maxWidth="80%"
-                marginTop="20px"
-                marginLeft="auto"
-                marginRight="auto"
-                maxHeight="fit-content"
-                bgcolor="background.paper"
-                padding="10px"
-                border={1}
-                borderRadius={1}
-                borderColor="primary.main"
-                display="flex"
-                flexDirection="column"
+                sx={modalBoxStyle}
             >
                 <Typography
                     variant="h6"
@@ -1457,25 +1394,9 @@ return (
             </Box>
         </Modal>
         <Modal open={editLinkModalOpen}
-            disableAutoFocus={true}
-            sx={{
-                margin: "auto",
-                maxHeight: "fit-content",
-            }}
         >
             <Box
-                maxWidth="80%"
-                marginTop="20px"
-                marginLeft="auto"
-                marginRight="auto"
-                maxHeight="fit-content"
-                bgcolor="background.paper"
-                padding="10px"
-                border={1}
-                borderRadius={1}
-                borderColor="primary.main"
-                display="flex"
-                flexDirection="column"
+                sx={modalBoxStyle}
             >
                 <Typography
                     variant="h6"
@@ -1551,26 +1472,11 @@ return (
         </Modal>
         <Modal open={passwordChangeModalOpen}
             disableAutoFocus={true}
-            sx={{
-                margin: "auto",
-                maxHeight: "fit-content",
-            }}
         >
             <Box
-                maxWidth="80%"
-                marginTop="20px"
-                marginLeft="auto"
-                marginRight="auto"
-                maxHeight="fit-content"
-                bgcolor="background.paper"
-                padding="10px"
-                border={1}
-                borderRadius={1}
-                borderColor="primary.main"
-                display="flex"
-                flexDirection="column"
+                sx={modalBoxStyle}
             >
-                <Stack direction="column" spacing={1}>
+                <Stack direction="column" spacing={2}>
                     <Typography
                         variant="h6"
                     >
@@ -1653,24 +1559,9 @@ return (
         </Modal>
         <Modal open={acctDeleteModalOpen}
             disableAutoFocus={true}
-            sx={{
-                margin: "auto",
-                maxHeight: "fit-content",
-            }}
         >
             <Box
-                maxWidth="80%"
-                marginTop="20px"
-                marginLeft="auto"
-                marginRight="auto"
-                maxHeight="fit-content"
-                bgcolor="background.paper"
-                padding="10px"
-                border={1}
-                borderRadius={1}
-                borderColor="primary.main"
-                display="flex"
-                flexDirection="column"
+                sx={modalBoxStyle}
             >
                 <Stack direction="column" spacing={1}>
                     <Typography
@@ -1726,6 +1617,86 @@ return (
                 </Stack>
             </Box>
         </Modal>
+        <Modal open={jsonImportModalOpen}
+            disableAutoFocus={true} 
+        >
+            <Box
+                sx={modalBoxStyle}
+            >
+                <Stack direction="column">
+                    {/* <Typography variant="body1" color="text.primary" mb={1}>
+                        Paste text from export file
+                    </Typography> */}
+                    <TextField
+                        multiline
+                        autoFocus={jsonImportModalOpen}
+                        inputRef={jsonImportInput}
+                        onFocus={(e) => {e.currentTarget.select()}}
+                        label="Paste text from export file"
+                        sx={{
+                            height: "100%",
+                            width: "100%",
+                        }}
+                        size="small"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") jsonImportModalImportButton.current.click();
+                        }}
+                        minRows={8}
+                        maxRows={8}
+                    />
+                <Stack direction="row" mt={1}>
+                    <Button
+                        ref={jsonImportModalImportButton}
+                        variant="contained"
+                        size="small"
+                        onClick={() => {
+                            let importedDir: LinkLockerLinkDir = JSON.parse(jsonImportInput.current.value, JsonReviver);
+                            for (let [_hostname, host] of importedDir.hosts) {
+                                for (let link of host.links) {
+                                    appendLink(link.guid, link.url, link.name, link.timestamp, host.favicon, link.tags, host.tags!);
+                                }
+                            }
+                            setJsonImportModalOpen(false);
+                        }} 
+                    >
+                        Import
+                    </Button>
+                    <Box flexGrow={1}/>
+                    <Button variant="contained" size="small" onClick={() => {setJsonImportModalOpen(false);}}>Cancel</Button>
+                </Stack>
+                </Stack>
+            </Box>
+        </Modal>
+        { __IN_DEBUG__ ?
+            <Modal open={jsonDumpOpen}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                        setJsonDumpOpen(false);
+                    }
+                }}
+            >
+                <Box
+                    sx={modalBoxStyle}
+                >
+                    <TextField
+                        multiline
+                        onFocus={(e) => {e.currentTarget.select()}}
+                        defaultValue={
+                            JSON.stringify(linkDir, JsonReplacer)
+                        }
+                        sx={{
+                            height: "100%",
+                            width: "100%",
+                            borderColor: "primary.dark",
+                        }}
+                        size="small"
+                        maxRows={12}
+                    />
+                </Box>
+            </Modal>
+            :
+            null
+        }
         <Popover id="entry-popover"
             anchorEl={linkPopoverAnchorEl}
             open={linkPopoverOpen}
@@ -1765,6 +1736,36 @@ return (
                     tags: {host?.tags?.join(" ")}
                 </Typography>
         </Popover>
+        <Dialog open={confirmLinkExportDialogOpen}
+            >
+            <DialogTitle>{"Export Unencrypted Links?"}</DialogTitle>
+            <DialogContent sx={{overflow: "hidden"}}>
+            <DialogContentText fontSize="1rem">Exported link file will not be encypted. Do you want to continue?</DialogContentText>
+            </DialogContent>
+            <DialogActions>
+                <Button size="small" onClick={(e) => {setConfirmLinkExportDialogOpen(false)}} autoFocus>Go Back</Button>
+                <Button size="small" onClick={(e) => {
+                    setConfirmLinkExportDialogOpen(false); 
+                    let link = document.createElement("a");
+                    let date = new Date()
+                    link.download = 
+                        `ll-export-`+
+                        `${date.getFullYear()}`+
+                        `${date.getMonth().toString().padStart(2, '0')}`+
+                        `${date.getDate().toString().padStart(2, '0')}`+
+                        `${date.getHours().toString().padStart(2, '0')}`+
+                        `${date.getMinutes().toString().padStart(2, '0')}.json`
+                    link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer, 4)}`
+                    link.style.display = "none";
+                    document.body.appendChild(link);
+                    window.setTimeout(() => {
+                        link.click();
+                        document.body.removeChild(link);
+                        window.setTimeout(() => {window.close()}, 100);
+                        }, 200)
+                }}>Export</Button>
+            </DialogActions>
+        </Dialog>
         <Dialog open={hostDeleteDialogOpen}
             onClose={handleHostDeleteDialogClose}
             >
@@ -1789,97 +1790,6 @@ return (
                 <Button size="small" onClick={(e) => {setOpenManyLinksDialog(false); openAllLinks()}}>Open</Button>
             </DialogActions>
         </Dialog>
-        <Modal open={jsonImportModalOpen}>
-            <Box
-                maxWidth="95%"
-                marginTop="10px"
-                marginLeft="auto"
-                marginRight="auto"
-                maxHeight="fit-content"
-                bgcolor="background.paper"
-                padding="10px"
-                border={1}
-                borderRadius={1}
-                borderColor="primary.main"
-                display="flex"
-                flexDirection="column"
-            >
-                <Stack direction="column">
-                    <Typography variant="body1" color="text.primary">
-                        Paste text from export file below
-                    </Typography>
-                    <TextField
-                        multiline
-                        autoFocus={jsonImportModalOpen}
-                        inputRef={jsonImportInput}
-                        onFocus={(e) => {e.currentTarget.select()}}
-                        sx={{
-                            height: "100%",
-                            width: "100%"
-                        }}
-                        size="small"
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") jsonImportModalImportButton.current.click();
-                        }}
-                        minRows={9}
-                        maxRows={9}
-                    />
-                <Stack direction="row">
-                    <Button
-                        ref={jsonImportModalImportButton}
-                        onClick={() => {
-                            let importedDir: LinkLockerLinkDir = JSON.parse(jsonImportInput.current.value, JsonReviver);
-                            for (let [_hostname, host] of importedDir.hosts) {
-                                for (let link of host.links) {
-                                    appendLink(link.guid, link.url, link.name, link.timestamp, host.favicon, link.tags, host.tags!);
-                                }
-                            }
-                            setJsonImportModalOpen(false);
-                        }} 
-                    >
-                        Import
-                    </Button>
-                    <Box flexGrow={1}/>
-                    <Button onClick={() => {setJsonImportModalOpen(false);}}>Cancel</Button>
-                </Stack>
-                </Stack>
-            </Box>
-        </Modal>
-        { __IN_DEBUG__ ?
-            <Modal open={jsonDumpOpen}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                        setJsonDumpOpen(false);
-                    }
-                }}
-            >
-                <Box
-                    sx={{
-                        margin: "1rem",
-                        border: "1",
-                        borderRadius: "1",
-                        borderColor: "primary.main",
-                        backgroundColor: "rgba(0,0,0,255)"
-                    }}
-                >
-                    <TextField
-                        multiline
-                        onFocus={(e) => {e.currentTarget.select()}}
-                        defaultValue={
-                            JSON.stringify(linkDir, JsonReplacer)
-                        }
-                        sx={{
-                            height: "100%",
-                            width: "100%"
-                        }}
-                        size="small"
-                        maxRows={12}
-                    />
-                </Box>
-            </Modal>
-            :
-            null
-        }
     </Box>
 );}
 

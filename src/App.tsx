@@ -13,6 +13,7 @@ import ViewLinks, { ErrorStateProp, SortDirection, SortMode } from "./ViewLinks"
 import CryptoJS from "crypto-js";
 import LoadingButton from "@mui/lab/LoadingButton";
 import * as constants from "./constants";
+import { typography } from "@mui/system";
 
 declare var __IN_DEBUG__: boolean;
 declare var __DEBUG_LIST__: LinkLockerLinkDir;
@@ -189,6 +190,22 @@ export const JsonReviver = (key: any, value: any) => {
         return new URL(value);
     }
     return value;
+}
+
+export const modalBoxStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "95%",
+    maxHeight: "fit-content",
+    padding: 1,
+    transform: "translate(-50%, -50%)",
+    bgcolor: "background.paper",
+    border: 1,
+    borderRadius: 1,
+    borderColor: "primary.main",
+    display: "flex",
+    flexDirection: "column",
 }
 
 //Return an array of account guid/username tuples
@@ -599,17 +616,24 @@ const App = () => {
                     paddingLeft="0.8rem"
                     paddingRight="0.8rem"
                     paddingBottom={__IN_DEBUG__ ? "0px" : "0.8rem"}
-                    margin="auto" 
+                    // margin="auto" 
                     // overflow-y="hidden" 
                     maxWidth={constants.MAIN_MAX_WIDTH} 
                     minWidth={constants.MAIN_MIN_WIDTH}
                     maxHeight="fit-content"
                     boxSizing="border-box"
                 >
-                    <Stack spacing={1} alignItems="center" key={renderedComponent}> 
-                        <Typography variant="h5">
-                            LinkLocker
-                        </Typography>
+                    <Stack alignItems="center" key={renderedComponent}> 
+                        {
+                            renderedComponent !== RenderedComponent.ViewLinks ?
+                            <Typography variant="h4" mb={1} color="primary.main">
+                                LinkLocker
+                            </Typography>
+                            :
+                            <Typography variant="h5" mb={1} color="primary.main">
+                                LinkLocker
+                            </Typography>
+                        }
                         {/* Conditionally render the three different components and a loading indicator */}
                         {
                             renderedComponent == RenderedComponent.Loading || renderedComponent == null || isLoading ? 
@@ -619,13 +643,34 @@ const App = () => {
                         }
                         {
                             renderedComponent == RenderedComponent.AcctCreate ?
-                            <AcctCreate addAcct={addAcct} importAcct={importAccountBackup} ref={acctCreateRef} />
+                            <>
+                                <Stack direction="row" justifyItems="center" alignItems="center" mb={2}>
+                                    <Typography variant="h5" border={1} paddingLeft={1} paddingRight={1} borderColor="primary.dark" borderRadius={1}>
+                                        Create Account
+                                    </Typography>
+                                </Stack>
+                                <AcctCreate 
+                                    addAcct={addAcct} 
+                                    importAcct={importAccountBackup} 
+                                    cancel={() => updateAddingNewAcct(false)}
+                                    cancelable={
+                                        config.accounts.length > 0
+                                    }
+                                    ref={acctCreateRef} />
+                            </>
                             :
                             null
                         }
                         {
                             renderedComponent == RenderedComponent.Login ?
-                            <Login failedLogin={failedLogin} tryLogin={tryLogin} availableLogins={getAcctList(config)} showAcctCreate={showAcctCreate}/>
+                            <>
+                                <Stack direction="row" justifyItems="center" alignItems="center" mb={2}>
+                                    <Typography variant="h5" border={1} paddingLeft={1} paddingRight={1} borderColor="primary.dark" borderRadius={1}>
+                                        Login
+                                    </Typography>
+                                </Stack>
+                                <Login failedLogin={failedLogin} tryLogin={tryLogin} availableLogins={getAcctList(config)} showAcctCreate={showAcctCreate}/>
+                            </>
                             :
                             null
                         }
@@ -653,7 +698,7 @@ const App = () => {
                     {
                         __IN_DEBUG__ ?
                         <Stack width="100%" flexDirection="row" justifyContent="right">
-                            <Typography variant="caption" marginRight="0.25rem" color="secondary.main">LinkLocker Debug v{__VERSION__}</Typography>
+                            <Typography sx={{fontWeight: 400, fontSize: "0.6rem", lineHeight: 1.66}} marginRight="0.25rem" color="secondary.main">LinkLocker Debug v{__VERSION__}</Typography>
                         </Stack>
                         :
                         null

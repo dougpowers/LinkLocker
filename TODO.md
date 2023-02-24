@@ -13,7 +13,8 @@
 - [x] Add json download option
 - [x] Change \__DEBUG_LIST__ to make timestamps randomized across several weeks
 - [x] Open all links button at bottom of screen (warning if over MAX_NUM_TAB_OPENS)
-- [ ] Clean up import modal borders and padding
+- [x] Clean up import modal borders and padding
+- [x] Add cancel button to AcctCreate when appropriate
 
 ### Major tasks
 - [x] Implement link editing and implement edit icon
@@ -36,7 +37,7 @@
 - [x] Add password entry requirement for account delete
 - [x] Add option download full, encrypted, account backup. 
 - [x] Add login and account create screen menu modal with option to import encrypted account backups
-- [ ] Add dialog for link export warning that the exported links will be unencrypted
+- [x] Add dialog for link export warning that the exported links will be unencrypted
 - [ ] Rewrite README for 0.2. Simplify structure and add screeshots (possibly logo)
 
 ## Delayed Changes

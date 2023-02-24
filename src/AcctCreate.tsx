@@ -6,15 +6,17 @@ import { createRef, forwardRef, KeyboardEvent, useEffect, useImperativeHandle, u
 import Typography from "@mui/material/Typography";
 import {v4 as uuidv4} from 'uuid';
 import Modal from "@mui/material/Modal";
-import { JsonReviver, LinkLockerAcct } from './App';
+import { JsonReviver, LinkLockerAcct, modalBoxStyle } from './App';
 
 type Props = {
     addAcct: (username: string, password: string, guid: string) => void,
     importAcct: (acct: LinkLockerAcct) => void,
+    cancelable: boolean,
+    cancel: () => void,
 }
 
 const AcctCreate = forwardRef((
-{addAcct, importAcct}: Props, ref) => {
+{addAcct, importAcct, cancel, cancelable}: Props, ref) => {
     const usernameInput: any = createRef();
     const passwordInput: any = createRef();
     const passwordField: any = createRef();
@@ -63,7 +65,7 @@ const AcctCreate = forwardRef((
     }
 
     return (
-            <Box>
+            <Box width="100%">
                 <Stack spacing={2} alignItems="left"> 
                     <Stack spacing={0} alignItems="left">
                         <Typography variant="caption">New User GUID:</Typography>
@@ -75,51 +77,47 @@ const AcctCreate = forwardRef((
                     </TextField>
                     <TextField ref={passwordField} error={errorState} inputProps={{type: "password"}} variant="outlined" inputRef={passwordInput} label="Password *" id="password" onKeyPress={(e) => handleKeyPress(e)}>
                     </TextField>
-                    <Stack direction="row">
-                        <Button ref={submitButton} size="small" variant="contained" onClick={submit}>Create Account</Button>
+                    <Stack direction="row" spacing={1}>
+                        <Button ref={submitButton} size="small" variant="contained" onClick={submit}>Create</Button>
                         <Box flexGrow={1} />
+                        {
+                            cancelable ?
+                            <Button size="small" variant="contained" onClick={() => {cancel()}}>Cancel</Button>
+                            :
+                            null
+                        }
                         <Button ref={importButton} size="small" variant="contained"
-                        onClick={(e) => {setImportAccountModalOpen(true);}} 
+                            onClick={(e) => {setImportAccountModalOpen(true);}} 
                         >Import</Button>
                     </Stack>
                 </Stack>
                 <Modal open={importAccountModalOpen}>
                     <Box
-                        maxWidth="95%"
-                        marginTop="10px"
-                        marginLeft="auto"
-                        marginRight="auto"
-                        maxHeight="fit-content"
-                        bgcolor="background.paper"
-                        padding="10px"
-                        border={1}
-                        borderRadius={1}
-                        borderColor="primary.main"
-                        display="flex"
-                        flexDirection="column"
+                        sx={modalBoxStyle}
                     >
-                        <Stack direction="column">
-                            <Typography variant="body1" color="text.primary">
-                                Paste text from export file below
-                            </Typography>
-                            <TextField
-                                multiline
-                                autoFocus={importAccountModalOpen}
-                                inputRef={importAccountInput}
-                                onFocus={(e) => {e.currentTarget.select()}}
-                                sx={{
-                                    height: "100%",
-                                    width: "100%"
-                                }}
-                                size="small"
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") importAccountModalImportButton.current.click();
-                                }}
-                                minRows={9}
-                                maxRows={9}
-                            />
-                        <Stack direction="row">
+                        <Typography variant="body1" mb={1} color="text.primary">
+                            Paste text from export file below
+                        </Typography>
+                        <TextField
+                            multiline
+                            autoFocus={importAccountModalOpen}
+                            inputRef={importAccountInput}
+                            onFocus={(e) => {e.currentTarget.select()}}
+                            sx={{
+                                height: "100%",
+                                width: "100%"
+                            }}
+                            size="small"
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") importAccountModalImportButton.current.click();
+                            }}
+                            minRows={8}
+                            maxRows={8}
+                        />
+                        <Stack direction="row" mt={1}>
                             <Button
+                                size="small"
+                                variant="contained"
                                 ref={importAccountModalImportButton}
                                 onClick={() => {
                                     let acct: LinkLockerAcct = JSON.parse(importAccountInput.current.value, JsonReviver);
@@ -130,8 +128,7 @@ const AcctCreate = forwardRef((
                                 Import
                             </Button>
                             <Box flexGrow={1}/>
-                            <Button onClick={() => {setImportAccountModalOpen(false);}}>Cancel</Button>
-                        </Stack>
+                            <Button size="small" variant="contained" onClick={() => {setImportAccountModalOpen(false);}}>Cancel</Button>
                         </Stack>
                     </Box>
                 </Modal>

@@ -54,8 +54,8 @@ const Login = ({failedLogin, availableLogins, tryLogin, showAcctCreate}: Props) 
     }, [])
 
     return (
-            <Box>
-                <Stack spacing={1} alignItems="left"> 
+            <Box width="100%">
+                <Stack spacing={2} alignItems="left"> 
                     <FormControl fullWidth>
                         <InputLabel id="username-select-label">Username</InputLabel>
                         <Select
@@ -81,9 +81,9 @@ const Login = ({failedLogin, availableLogins, tryLogin, showAcctCreate}: Props) 
                     </FormControl>
                     <TextField inputProps={{type: "password"}} variant="outlined" error={failedLogin} ref={passwordField} inputRef={passwordInput} label="Password" id="password" onKeyPress={(e) => handleKeyPress(e)} />
                     <Stack direction="row" spacing={2}>
-                        <Button ref={submitButton} variant="contained" onClick={submit}>Login</Button>
+                        <Button size="small" ref={submitButton} variant="contained" onClick={submit}>Login</Button>
                         <Box flexGrow={1} />
-                        <Button variant="contained" onClick={showAcctCreate}>Add Account</Button>
+                        <Button size="small" variant="contained" onClick={showAcctCreate}>Add Account</Button>
                     </Stack>
                 </Stack>
             </Box>
