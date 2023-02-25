@@ -96,7 +96,7 @@ const AcctCreate = forwardRef((
                         sx={modalBoxStyle}
                     >
                         <Typography variant="body1" mb={1} color="text.primary">
-                            Paste text from export file below
+                            Paste text from backup file below
                         </Typography>
                         <TextField
                             multiline

@@ -141,6 +141,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
     const [linkUrl, setLinkUrl] = useState<null | URL>(null);
     const [linkName, setLinkName] = useState("");
     const [linkTags, setLinkTags] = useState("");
+    const [linkTimestamp, setLinkTimestamp] = useState(0);
     const [host, setHost] = useState<null | LinkLockerLinkHost>(null);
     const [passwordChangeModalOpen, setPasswordChangeModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(startSearchTerm);
@@ -216,6 +217,7 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
         setLinkGuid(link.guid);
         setLinkUrl(new URL(link.href));
         setLinkName(link.name);
+        setLinkTimestamp(link.timestamp);
         if (link.tags.length > 0) {
             setLinkTags(link.tags.join(" "));
         } else {
@@ -1055,9 +1057,13 @@ return (
                     variant="body2"
                     sx={{
                         cursor: "pointer",
+                        transition: "background-color .15s",
+                        "&:hover": {
+                            bgcolor: "primary.dark"
+                        }
                     }} 
                     bgcolor="primary.main"
-                    borderRadius="6px"
+                    borderRadius="5px"
                     pl="0.2rem"
                     pr="0.2rem"
                     color="primary.contrastText"
@@ -1795,8 +1801,9 @@ return (
             disableRestoreFocus
         >
             <Typography paragraph variant="caption" padding="3px" sx={{mb: 0}}>
-                href: {linkUrl?.toString()} <br />
-                tags: {linkTags}
+                href: {linkUrl?.toString()} <br/>
+                added: {new Date(linkTimestamp).toLocaleString()} <br/>
+                tags: {linkTags} <br/>
             </Typography>
         </Popover>
         <Popover id="host-popover"
