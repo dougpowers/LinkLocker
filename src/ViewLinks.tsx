@@ -315,7 +315,6 @@ const ViewLinks = ({linkDir: linkDir, updateLinks, updateSort, updateSearchTerm,
 
     const appendLink = (guid: string, url: URL, name: string, timestamp: number, favicon: string, tags: Array<string>, newHostTags: Array<string>) => {
         resizeFavicon(favicon).then((faviconData) => {
-            tags = tags.concat(newHostTags);
             let link: LinkLockerLink = {
                 guid: guid,
                 href: url.href,
@@ -1081,6 +1080,10 @@ return (
                                 cursor: "pointer", 
                                 fontSize: 16, 
                                 color: "primary.main",
+                                transition: "color .15s",
+                                "&:hover": {
+                                    color: "primary.dark"
+                                }
                             }} 
                             onClick={() => {setSortDirection(SortDirection.Ascending); updateSort(sortMode, SortDirection.Ascending); linkDisplayBox.current.scrollTo(0,0)}}
                         />
@@ -1091,6 +1094,10 @@ return (
                                 cursor: "pointer", 
                                 fontSize: 16, 
                                 color: "primary.main",
+                                transition: "color .15s",
+                                "&:hover": {
+                                    color: "primary.dark"
+                                }
                             }} 
                             onClick={() => {setSortDirection(SortDirection.Descending); updateSort(sortMode, SortDirection.Descending); linkDisplayBox.current.scrollTo(0,0)}}
                         />
@@ -1267,11 +1274,11 @@ return (
                         disabled={linkDir?.hosts == undefined}
                     >Export Links...</MenuItem>
                     <MenuItem key="download_backup"
-                        dense onClick={() => {
+                        divider dense onClick={() => {
                             exportAcct();
                         }}
                         disabled={linkDir?.hosts == undefined}
-                    >Backup Account...</MenuItem>
+                    >Back Up Account...</MenuItem>
                     <MenuItem dense key="logout" onClick={logout} selected>Logout</MenuItem>
                 </Menu>
             </Stack>
@@ -1844,14 +1851,14 @@ return (
                         `${date.getDate().toString().padStart(2, '0')}`+
                         `${date.getHours().toString().padStart(2, '0')}`+
                         `${date.getMinutes().toString().padStart(2, '0')}.json`
-                    link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer, 4)}`
+                    link.href = `data:text/html,${JSON.stringify(linkDir, JsonReplacer)}`
                     link.style.display = "none";
                     document.body.appendChild(link);
                     window.setTimeout(() => {
                         link.click();
                         document.body.removeChild(link);
                         window.setTimeout(() => {window.close()}, 100);
-                        }, 200)
+                        }, 500)
                 }}>Export</Button>
             </DialogActions>
         </Dialog>

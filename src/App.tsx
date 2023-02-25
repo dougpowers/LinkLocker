@@ -518,14 +518,14 @@ const App = () => {
                 `${date.getDate().toString().padStart(2, '0')}`+
                 `${date.getHours().toString().padStart(2, '0')}`+
                 `${date.getMinutes().toString().padStart(2, '0')}.json`
-            link.href = `data:text/html,${JSON.stringify(userAcct, JsonReplacer, 4)}`
+            link.href = `data:text/html,${JSON.stringify(userAcct, JsonReplacer)}`
             link.style.display = "none";
             document.body.appendChild(link);
             window.setTimeout(() => {
                 link.click();
                 document.body.removeChild(link);
                 window.setTimeout(() => {window.close()}, 100);
-            }, 200)
+                }, 500)
         }
     }
 

@@ -1,9 +1,8 @@
-<h2 align="center"><img src="https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/Logo.png" height="128"><br>Link Locker</h2>
-<p align="center"><strong>Encrypted link management for Firefox</strong></p>
-
 [](https://img.shields.io/github/license/dougpowers/LinkLocker)
 [![](https://img.shields.io/amo/v/linklocker)](https://addons.mozilla.org/en-US/firefox/addon/linklocker/)
 [![](https://img.shields.io/badge/LinkedIn-Douglas%20Powers-blue)](https://www.linkedin.com/in/douglas-powers-537380104/)
+<h2 align="center"><img src="https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/Logo.png" height="128"><br>Link Locker</h2>
+<p align="center"><strong>Encrypted link management for Firefox</strong></p>
 
 LinkLocker is an encypted link manager addon for Firefox.
 
@@ -25,13 +24,13 @@ LinkLocker can be installed via the [Firefox Addon Marketplace](https://addons.m
 - Sessions are purged on browser close, securing your data
 
 ## 👩‍💻 Building LinkLocker for Yourself
-You can modify and build LinkLocker for yourself. The build environment is currently configured for Windows. If you wish to build this extension on MacOS or Linux, you'll have to modify the npm scripts in `package.json`;
+LinkLocker is Open Source Software licenced under the MIT Licence. Feel free to modify, build, and redistribute LinkLocker. The build environment is currently configured for Windows. To build this extension on MacOS or Linux, the scripts in `package.json` will need to be modified.
 
-[Firefox Developer Edition](https://www.mozilla.org/en-US/firefox/developer/) is required to run and test LinkLocker from local build files. If you don't have it, download and install it. If you don't install it to the default location, you'll have to change the `WEB_EXT_FIREFOX` environment variable in `package.json`.
+[Firefox Developer Edition](https://www.mozilla.org/en-US/firefox/developer/) is required to run and test LinkLocker from local build files. If it's not installed in the default location, change the `WEB_EXT_FIREFOX` environment variables in `package.json` as appropriate.
 
-If you want to permenantly install a local version of LinkLocker in your Firefox Developer Edition profile, you'll need to enable unsigned xpi installation. To do this, go to `about:config` and change `xpinstall.signatures.required` to `false`.
+To permenantly install a local version of LinkLocker in a personal Firefox Developer Edition profile, unsigned xpi installation must be enabled. To do this, go to `about:config` and change `xpinstall.signatures.required` to `false`.
 
-[Node.js](nodejs.org) is required. If you don't have it, download and install it.
+[Node.js](nodejs.org) is required.
 
 Clone the repository:
 ```sh
@@ -62,7 +61,7 @@ or
 ```sh
 $ npm run runprod
 ```
-You can make changes and rebuild the addon and it will automatically be updated without having to close Firefox.
+Changes can be made to LinkLocker without having to re-launch Firefox. Rebuild using `npm run buildprod` or `npm run builddev` and LinkLocker will be automatically reloaded.
 
 To package LinkLocker for a local unsigned installation:
 ```sh
@@ -75,64 +74,115 @@ $ npm run ziptestprod
 
 The resulting file will be located at `./build/web-ext-artifacts/linklocker-(version).zip` or `./dist/web-ext-artifacts/linklocker-(version).zip`.
 
-To install this, go to `about:addons`, click the gear icon, and select `Install Add-on From File...`.
+To install this, navigate to `about:addons`, click the gear icon, and select `Install Add-on From File...`.
 
 ## Using LinkLocker
 LinkLocker can be launched at any time from inside Firefox by pressing Ctrl-Alt-c.
 
 ### Account Creation
-When LinkLocker is first launched, it will prompt you to create an account.
+When LinkLocker is first launched, it will prompt to create an account.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/AcctCreate.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/AcctCreate.png)
 
 All accounts are internally referred to via a UUIDv4 so a username is optional.
 
-If you've previously made an account backup, you can import it here.
+If an account backup has been made previously, it can be imported here.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/BackupImport.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/BackupImport.png)
 
-> **FAQ - Why do I have to paste text into LinkLocker?
+> ❔*FAQ* - Why do I have to paste text into LinkLocker?
 Due to the restrictions Firefox places on local file access, you'll have to open your backups or exports in a text editor and paste the content into LinkLocker. A future Chrome version of LinkLocker will likely not have this restriction.
 
 ### Logging In
 If LinkLocker has accounts registered, it will show the login screen on first launch.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/Login.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/Login.png)
 
-You can add further accounts by pressing the `Add Account` button.
+Further accounts can be added by pressing the `Add Account` button.
 
-### Using the View Links Ccreen
+### Using the View Links Screen
 LinkLocker's main screen is where all the action happens!
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/ViewEmpty.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/ViewEmpty.png)
 
 #### Adding Links
 Press the `Add Link` button or simply press Space or Enter when LinkLocker first opens to add a new link.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/AddFirstLink.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/AddFirstLink.png)
 
-The link name is derived from the title of the tab. You can change this to whatever you wish.
+The link name is derived from the title of the tab. This can be changed to whatever name is desired. LinkLocker will attempt to remove trailing references to the site in the title (e.g. " | CNN.com") but this may not always be possible.
 
 Enter space-separated tags for each link.
 
-If this is the first link you've added from this host, you'll also have the option of defining host-specific tags. These are automatically added to the tags field for future links from this host.
+If this is the first link added from a host, there will also be an option to define host-specific tags. These are automatically added to the tags field for future links added from this host.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/AddSecondLink.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/AddSecondLink.png)
 
 #### Editing Links
 When hovering over a link, there are options to view additional information, edit it, or delete it.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/LinkInfo.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/LinkInfo.png)
 
-Editing links looks identical to adding it in the first place. 
+Editing links looks identical to adding them in the first place. 
 
-You can edit the host default tags by clicking the green edit icon in the host entry. You can also delete all links from the host by clicking the red trash can icon. You'll be prompted to confirm this operation.
+The host default tags can be edited by clicking the green edit icon in the host entry. Changing the host tags will only affect the default tags on new links. It will not change the tags on any existing links. 
+All links from the host can be deleted by clicking the red trash can icon. A prompt will be shown to confirm this operation.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/EditHost.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/EditHost.png)
 
 #### Sorting Links
 LinkLocker has three sorting modes: Alphabetical by Host, Alphabetical by Link Name, and Temporally by Timestamp. Click the blue sort mode indicator to bring up the sort mode menu.
 
-![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/SortMenu.png)
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/SortMenu.png)
 
-You can change the sort direction by clicking the arrow to the right of the sort mode indicator.
+The sort direction can be changed by clicking the arrow to the right of the sort mode indicator.
+
+Sort modes are also grouping modes. Sorting by Name places the links in a flat alphabetical list.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/SortByName.png)
+
+Sorting by Date groups links by the day they were created.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/SortByDate.png)
+
+#### Searching and Filtering Links
+The search bar can be quickly focused from inside LinkLocker by pressing the `s` key. Type search terms and press `Enter` to search. Clear the search field and press `Enter` again to again display all links.
+
+LinkLocker will search for all space-separated search terms in the link name, url, and tags.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/SearchTerms.png)
+
+Click the question mark icon to bring up information about LinkLocker's search operators.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/SearchHelp.png)
+
+Use `host:<term>`, `tag:<tag>`, `before:<YYYY-MM-DD>`, and `after:<YYYY-MM-DD>` alone or in combination with search terms to narrow down the results.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/FilteredSearch.png)
+
+`host:<term>` will filter out any link whose hostname doesn't *contain* `<term>`. `tag:<tag>` will filter out any link that doesn't have `<tag>` *exactly* (case-insensitive).
+
+`-` can be used to reverse `host:<term>` and `tag:<tag>`.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/NegateFilteredSearch.png)
+
+#### Changing Passwords and Deleting Accounts
+Account passwords can be changed by selecting `Change Password...` from the main menu at the bottom-right of the LinkLocker window.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/ChangePassword.png)
+
+Accounts can be deleted by selecting `Delete Account...`. The account password is required to complete this operation.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/DeleteAccount.png)
+
+#### Backups and Exports
+Accounts can be backed up for future importing by selecting `Back Up Account...`.
+
+A full link JSON file can be exported by selecting `Export Links...`.
+
+> ⚠ Link Exports are in unencrypted plain text. This is only recommended for moving links to other applications. To make a secure backup of links, use the `Back Up Account` feature and import the account from the `Add User` screen to restore it.
+
+#### Importing Links
+Like importing account backups, link lists can be imported from the main menu by selecting `Load Links...`. Paste the contents of a LinkLocker export file to import its links. Duplicate links will be skipped.
+
+![](https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/LoadLinks.png)
