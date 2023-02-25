@@ -6,6 +6,8 @@
 
 LinkLocker is an encypted link manager addon for Firefox.
 
+***
+
 - ❓ Report missing features/bugs on [GitHub](https://github.com/dougpowers/LinkLocker/issues).
 - 📃 Refer to [TODO.md](TODO.md) for finished and upcoming features.
 
@@ -14,7 +16,6 @@ LinkLocker can be installed via the [Firefox Addon Marketplace](https://addons.m
 
 ## ☑ Features
 - AES256 encryption with argon2id key-derivation and authentication
-- Ctrl-Alt-c shortcut for quick opening
 - Easy adding, editing, and tagging of links
 - Fuzzy searching with Fuse.js allows you to search the link url, name, and tags at the same time
 - Sorting by host, link name, or creation date in either ascending or descending order
@@ -23,6 +24,8 @@ LinkLocker can be installed via the [Firefox Addon Marketplace](https://addons.m
 - Unencrypted link export to disk
 - Sessions are purged on browser close, securing your data
 
+<h2 align="center"><img src="https://raw.githubusercontent.com/dougpowers/LinkLocker/master/web-assets/screenshots/ViewFull.png"></h2>
+
 ## 👩‍💻 Building LinkLocker for Yourself
 LinkLocker is Open Source Software licenced under the MIT Licence. Feel free to modify, build, and redistribute LinkLocker. The build environment is currently configured for Windows. To build this extension on MacOS or Linux, the scripts in `package.json` will need to be modified.
 
@@ -30,7 +33,7 @@ LinkLocker is Open Source Software licenced under the MIT Licence. Feel free to 
 
 To permenantly install a local version of LinkLocker in a personal Firefox Developer Edition profile, unsigned xpi installation must be enabled. To do this, go to `about:config` and change `xpinstall.signatures.required` to `false`.
 
-[Node.js](nodejs.org) is required.
+[Node.js](https://nodejs.org) is required to build LinkLocker.
 
 Clone the repository:
 ```sh
